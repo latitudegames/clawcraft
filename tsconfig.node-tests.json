@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "outDir": ".tmp/node-tests",
+    "rootDir": "src"
+  },
+  "include": [
+    "src/node-tests.d.ts",
+    "src/lib/utils/rng.ts",
+    "src/lib/game/formulas.ts",
+    "src/lib/ai/mock-llm.ts",
+    "src/lib/game/formulas.test.ts",
+    "src/lib/game/character.ts",
+    "src/lib/game/character.test.ts",
+    "src/lib/game/timing.ts",
+    "src/lib/game/timing.test.ts",
+    "src/lib/game/quest-resolution.ts",
+    "src/lib/game/quest-resolution.test.ts",
+    "src/lib/game/quest-effects.ts",
+    "src/lib/game/quest-effects.test.ts",
+    "src/types/**/*.ts"
+  ]
+}

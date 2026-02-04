@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --parchment-bg: #f5e6c8;
+  --parchment-dark: #d4c4a8;
+  --ink-brown: #4a3728;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  color: var(--ink-brown);
+  background: #faf7f0;
+}
+

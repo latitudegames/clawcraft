@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: clawcraft
+    volumes:
+      - clawcraft_pg:/var/lib/postgresql/data
+
+volumes:
+  clawcraft_pg:
+

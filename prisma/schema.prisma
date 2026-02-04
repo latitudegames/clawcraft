@@ -1,0 +1,327 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Skill {
+  melee
+  ranged
+  unarmed
+  necromancy
+  elemental
+  enchantment
+  healing
+  illusion
+  summoning
+  stealth
+  lockpicking
+  poison
+  persuasion
+  deception
+  seduction
+}
+
+enum LocationType {
+  major_city
+  town
+  dungeon
+  wild
+  landmark
+}
+
+enum ItemRarity {
+  common
+  uncommon
+  rare
+  epic
+  legendary
+}
+
+enum EquipmentSlot {
+  head
+  chest
+  legs
+  boots
+  right_hand
+  left_hand
+}
+
+enum QuestOutcome {
+  success
+  partial
+  failure
+  timeout
+}
+
+enum QuestStatus {
+  active
+  archived
+}
+
+enum PartyQueueStatus {
+  waiting
+  formed
+  timed_out
+}
+
+model Location {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  description String
+  type        LocationType
+  biomeTag    String?
+  population  Int          @default(0)
+  x           Int?
+  y           Int?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  connectionsFrom LocationConnection[] @relation("ConnectionsFrom")
+  connectionsTo   LocationConnection[] @relation("ConnectionsTo")
+
+  questsOrigin      Quest[]             @relation("QuestOrigin")
+  questsDestination Quest[]             @relation("QuestDestination")
+  questsFailDest    Quest[]             @relation("QuestFailDestination")
+  agentsHere        Agent[]             @relation("AgentLocation")
+  statusHere        QuestStatusUpdate[] @relation("StatusLocation")
+  travelTargets     QuestStatusUpdate[] @relation("StatusTravelingToward")
+}
+
+model LocationConnection {
+  id        String   @id @default(cuid())
+  fromId    String
+  toId      String
+  distance  Int      @default(1)
+  createdAt DateTime @default(now())
+
+  from Location @relation("ConnectionsFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to   Location @relation("ConnectionsTo", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@unique([fromId, toId])
+}
+
+model Guild {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  tag       String   @unique
+  leaderId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  leader  Agent   @relation("GuildLeader", fields: [leaderId], references: [id])
+  members Agent[] @relation("GuildMembers")
+}
+
+model Agent {
+  id                 String   @id @default(cuid())
+  username           String   @unique
+  profilePictureId   Int      @default(0)
+  level              Int      @default(1)
+  xp                 Int      @default(0)
+  gold               Int      @default(0)
+  unspentSkillPoints Int      @default(0)
+
+  /// JSON mapping of Skill -> number.
+  skills Json
+
+  /// JSON string array of journey log entries.
+  journeyLog Json?
+
+  /// JSON blob matching dashboard's last_quest_result (shape versioned in app code).
+  lastQuestResult Json?
+
+  webhookUrl            String?
+  locationId            String
+  guildId               String?
+  lastActionAt          DateTime?
+  nextActionAvailableAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  location Location @relation("AgentLocation", fields: [locationId], references: [id])
+  guild    Guild?   @relation("GuildMembers", fields: [guildId], references: [id])
+  leading  Guild?   @relation("GuildLeader")
+
+  inventory     AgentInventoryItem[]
+  equipment     AgentEquipmentItem[]
+  queueEntries  QuestPartyQueueParticipant[]
+  runEntries    QuestRunParticipant[]
+
+  @@index([level, xp])
+  @@index([guildId])
+  @@index([locationId])
+}
+
+model Item {
+  id          String     @id
+  name        String
+  description String
+  rarity      ItemRarity
+  slot        EquipmentSlot
+
+  /// JSON mapping of Skill -> bonus (int).
+  skillBonuses Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  inInventories AgentInventoryItem[]
+  equippedBy    AgentEquipmentItem[]
+}
+
+model AgentInventoryItem {
+  id         String   @id @default(cuid())
+  agentId    String
+  itemId     String
+  quantity   Int      @default(1)
+  acquiredAt DateTime @default(now())
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  item  Item  @relation(fields: [itemId], references: [id])
+
+  @@unique([agentId, itemId])
+  @@index([itemId])
+}
+
+model AgentEquipmentItem {
+  id        String        @id @default(cuid())
+  agentId   String
+  slot      EquipmentSlot
+  itemId    String
+  equippedAt DateTime     @default(now())
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  item  Item  @relation(fields: [itemId], references: [id])
+
+  @@unique([agentId, slot])
+  @@index([itemId])
+}
+
+model Quest {
+  id               String     @id @default(uuid())
+  name             String
+  description      String
+  status           QuestStatus @default(active)
+
+  originId         String
+  destinationId    String
+  failDestinationId String?
+
+  partySize        Int
+  /// Base challenge rating (party quests scale by partySize in formulas).
+  challengeRating  Int
+
+  /// JSON mapping of Skill -> multiplier (0.0 to 2.0).
+  skillMultipliers Json
+
+  /// JSON blob of rewards (success/partial xp+gold).
+  rewards Json
+
+  /// JSON string array of 1-3 nearby POI names/ids used by status updates.
+  nearbyPois Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  origin          Location  @relation("QuestOrigin", fields: [originId], references: [id])
+  destination     Location  @relation("QuestDestination", fields: [destinationId], references: [id])
+  failDestination Location? @relation("QuestFailDestination", fields: [failDestinationId], references: [id])
+
+  partyQueue QuestPartyQueue?
+  runs       QuestRun[]
+
+  @@index([status, originId])
+}
+
+model QuestPartyQueue {
+  id        String          @id @default(cuid())
+  questId   String          @unique
+  status    PartyQueueStatus @default(waiting)
+  expiresAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  quest        Quest                       @relation(fields: [questId], references: [id], onDelete: Cascade)
+  participants QuestPartyQueueParticipant[]
+}
+
+model QuestPartyQueueParticipant {
+  id       String   @id @default(cuid())
+  queueId  String
+  agentId  String
+  joinedAt DateTime @default(now())
+
+  queue QuestPartyQueue @relation(fields: [queueId], references: [id], onDelete: Cascade)
+  agent Agent          @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([queueId, agentId])
+  @@index([agentId])
+}
+
+model QuestRun {
+  id            String      @id @default(cuid())
+  questId       String
+  outcome       QuestOutcome
+  startedAt     DateTime    @default(now())
+  resolvedAt    DateTime?
+
+  effectiveSkill Float?
+  randomFactor   Int?
+  successLevel   Float?
+
+  /// JSON blob of rewards actually granted (xp/gold/items/etc).
+  rewardsGranted Json?
+
+  quest         Quest               @relation(fields: [questId], references: [id])
+  participants  QuestRunParticipant[]
+  statusUpdates QuestStatusUpdate[]
+
+  @@index([questId, startedAt])
+}
+
+model QuestRunParticipant {
+  id          String   @id @default(cuid())
+  runId       String
+  agentId     String
+  skillsChosen Skill[]
+  customAction String
+
+  contributedEffectiveSkill Float?
+
+  xpGained   Int?
+  goldGained Int?
+  goldLost   Int?
+
+  createdAt DateTime @default(now())
+
+  run   QuestRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  agent Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([runId, agentId])
+  @@index([agentId])
+}
+
+model QuestStatusUpdate {
+  id               String   @id @default(cuid())
+  runId            String
+  step             Int
+  text             String
+  locationId       String
+  traveling        Boolean  @default(false)
+  travelingTowardId String?
+  createdAt        DateTime @default(now())
+
+  run            QuestRun  @relation(fields: [runId], references: [id], onDelete: Cascade)
+  location       Location  @relation("StatusLocation", fields: [locationId], references: [id])
+  travelingToward Location? @relation("StatusTravelingToward", fields: [travelingTowardId], references: [id])
+
+  @@unique([runId, step])
+  @@index([locationId])
+}
+
