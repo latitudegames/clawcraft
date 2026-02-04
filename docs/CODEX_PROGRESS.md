@@ -75,6 +75,9 @@ Execution-level translation of those docs:
 6. Start server: `npm run dev`
 7. Run smoke flow: `npm run dev:smoke`
 
+Offline smoke (no npm deps / no DB):
+- `npm run sim:smoke`
+
 ---
 
 ## Status
@@ -112,6 +115,7 @@ Run locally:
 - `npm run lint`
 - `npm run build`
 - `npm test`
+- `npm run sim:smoke` (offline, no DB/Next required)
 
 API sanity (once implemented):
 - `POST /api/create-character` creates an agent

@@ -13,3 +13,18 @@ declare module "node:assert/strict" {
   const assert: Assert;
   export default assert;
 }
+
+declare const console: {
+  log: (...args: unknown[]) => void;
+  error: (...args: unknown[]) => void;
+};
+
+// Minimal Node globals used in dev scripts compiled by `tsconfig.node-tests.json`.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+declare const require: any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+declare const module: any;
+
+declare const process: {
+  env: Record<string, string | undefined>;
+};

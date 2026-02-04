@@ -9,10 +9,12 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test:node": "tsc -p tsconfig.node-tests.json && node -e \"const fs=require('node:fs'); fs.writeFileSync('.tmp/node-tests/package.json', JSON.stringify({type:'commonjs'}));\" && node --test .tmp/node-tests/**/*.test.js",
+    "node:prep": "node -e \"const fs=require('node:fs'); fs.mkdirSync('.tmp/node-tests',{recursive:true}); fs.writeFileSync('.tmp/node-tests/package.json', JSON.stringify({type:'commonjs'}));\"",
+    "test:node": "tsc -p tsconfig.node-tests.json && npm run node:prep && node --test .tmp/node-tests/**/*.test.js",
     "test": "npm run test:node",
     "dev:seed": "node scripts/dev/seed.mjs",
-    "dev:smoke": "node scripts/dev/smoke.mjs"
+    "dev:smoke": "node scripts/dev/smoke.mjs",
+    "sim:smoke": "tsc -p tsconfig.node-tests.json && npm run node:prep && node .tmp/node-tests/lib/sim/smoke.js"
   },
   "dependencies": {
     "@pixi/react": "^7.1.2",

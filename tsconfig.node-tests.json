@@ -25,6 +25,8 @@
     "src/lib/game/quest-resolution.test.ts",
     "src/lib/game/quest-effects.ts",
     "src/lib/game/quest-effects.test.ts",
+    "src/lib/sim/smoke.ts",
+    "src/lib/sim/smoke.test.ts",
     "src/types/**/*.ts"
   ]
 }
