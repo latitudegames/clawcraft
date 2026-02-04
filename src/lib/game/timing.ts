@@ -25,3 +25,27 @@ export function questStepAt(args: { startedAtMs: number; nowMs: number; stepInte
   return clampInt(step, 1, totalSteps);
 }
 
+export function questStepInfoAt(args: {
+  startedAtMs: number;
+  nowMs: number;
+  stepIntervalMs: number;
+  totalSteps: number;
+}): { step: number; progress: number } {
+  const { startedAtMs, nowMs, stepIntervalMs, totalSteps } = args;
+  if (!Number.isFinite(startedAtMs)) throw new Error("startedAtMs must be finite");
+  if (!Number.isFinite(nowMs)) throw new Error("nowMs must be finite");
+  if (!Number.isFinite(stepIntervalMs) || stepIntervalMs <= 0) throw new Error("stepIntervalMs must be > 0");
+  if (!Number.isInteger(totalSteps) || totalSteps < 1) throw new Error("totalSteps must be an integer >= 1");
+
+  if (nowMs <= startedAtMs) return { step: 1, progress: 0 };
+
+  const elapsedMs = nowMs - startedAtMs;
+  const rawStep = Math.floor(elapsedMs / stepIntervalMs) + 1;
+  const step = clampInt(rawStep, 1, totalSteps);
+
+  const stepStartMs = startedAtMs + (step - 1) * stepIntervalMs;
+  const progressRaw = (nowMs - stepStartMs) / stepIntervalMs;
+  const progress = Math.max(0, Math.min(1, progressRaw));
+
+  return { step, progress };
+}

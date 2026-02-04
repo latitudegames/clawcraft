@@ -1,14 +1,119 @@
 import { NextResponse } from "next/server";
 
-export async function GET() {
-  return NextResponse.json(
-    {
-      ok: false,
-      error: "NOT_IMPLEMENTED",
-      message: "World-state endpoint not implemented yet.",
-      help: "Planned: GET /world-state returns POIs + agent positions + current speech bubbles."
-    },
-    { status: 501 }
-  );
+import { DEV_CONFIG } from "@/config/dev-mode";
+import { prisma } from "@/lib/db/prisma";
+import { scaleDurationMs, questStepInfoAt } from "@/lib/game/timing";
+import { resolveQuestRun } from "@/lib/server/resolve-quest-run";
+
+export const runtime = "nodejs";
+
+const COOLDOWN_MS = 12 * 60 * 60 * 1000;
+const STATUS_INTERVAL_MS = 30 * 60 * 1000;
+const STATUS_STEPS = 20;
+
+function cooldownMs() {
+  return DEV_CONFIG.DEV_MODE ? scaleDurationMs(COOLDOWN_MS, DEV_CONFIG.TIME_SCALE) : COOLDOWN_MS;
 }
 
+function statusIntervalMs() {
+  return DEV_CONFIG.DEV_MODE ? scaleDurationMs(STATUS_INTERVAL_MS, DEV_CONFIG.TIME_SCALE) : STATUS_INTERVAL_MS;
+}
+
+export async function GET() {
+  const now = new Date();
+
+  const locations = await prisma.location.findMany({
+    select: { id: true, name: true, type: true, x: true, y: true }
+  });
+
+  const agents = await prisma.agent.findMany({
+    include: { guild: true, location: true }
+  });
+
+  const activeRuns = await prisma.questRun.findMany({
+    where: { resolvedAt: null, participants: { some: { agentId: { in: agents.map((a) => a.id) } } } },
+    include: {
+      participants: { select: { agentId: true } },
+      statusUpdates: { include: { location: true, travelingToward: true }, orderBy: { step: "asc" } }
+    }
+  });
+
+  const runByAgentId = new Map<string, (typeof activeRuns)[number]>();
+  for (const run of activeRuns) {
+    const resolvesAt = new Date(run.startedAt.getTime() + cooldownMs());
+    if (now >= resolvesAt) {
+      await resolveQuestRun(run.id, now);
+      continue;
+    }
+    for (const p of run.participants) runByAgentId.set(p.agentId, run);
+  }
+
+  return NextResponse.json({
+    server_time: now.toISOString(),
+    locations: locations.map((l) => ({
+      id: l.id,
+      name: l.name,
+      type: l.type,
+      x: l.x,
+      y: l.y
+    })),
+    agents: agents.map((a) => {
+      const run = runByAgentId.get(a.id);
+      if (!run) {
+        return {
+          username: a.username,
+          guild_tag: a.guild?.tag ?? null,
+          level: a.level,
+          location: a.location.name,
+          x: a.location.x,
+          y: a.location.y,
+          traveling: false,
+          status: null
+        };
+      }
+
+      const info = questStepInfoAt({
+        startedAtMs: run.startedAt.getTime(),
+        nowMs: now.getTime(),
+        stepIntervalMs: statusIntervalMs(),
+        totalSteps: STATUS_STEPS
+      });
+
+      const current = run.statusUpdates[info.step - 1] ?? null;
+      const prev = run.statusUpdates[Math.max(0, info.step - 2)] ?? current;
+
+      const fromLoc = prev?.location ?? current?.location ?? a.location;
+      const toLoc = current?.travelingToward ?? current?.location ?? a.location;
+
+      const fromX = fromLoc?.x ?? 0;
+      const fromY = fromLoc?.y ?? 0;
+      const toX = toLoc?.x ?? fromX;
+      const toY = toLoc?.y ?? fromY;
+
+      const traveling = Boolean(current?.traveling && current?.travelingToward);
+      const x = traveling ? fromX + (toX - fromX) * info.progress : current?.location?.x ?? fromX;
+      const y = traveling ? fromY + (toY - fromY) * info.progress : current?.location?.y ?? fromY;
+
+      const status = current
+        ? {
+            step: current.step,
+            text: current.text,
+            location: current.location.name,
+            traveling: current.traveling,
+            traveling_toward: current.travelingToward?.name ?? null
+          }
+        : null;
+
+      return {
+        username: a.username,
+        guild_tag: a.guild?.tag ?? null,
+        level: a.level,
+        location: fromLoc?.name ?? a.location.name,
+        x,
+        y,
+        traveling,
+        status
+      };
+    })
+  });
+}

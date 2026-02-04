@@ -37,13 +37,19 @@ Execution-level translation of those docs:
   - `GET /api/quests`
   - `POST /api/action` (solo quests only; party quests return `501`)
   - `GET /api/dashboard`
+  - `GET /api/world-state`
+  - `GET /api/leaderboard`
+  - `GET /api/leaderboard/guilds`
+  - `POST /api/webhook`
 
 ### Not implemented yet (intentionally stubbed)
 - Prisma migrations/seed scripts
-- Some API routes under `src/app/api/*` still return `501 NOT_IMPLEMENTED`:
-  - `GET /api/leaderboard`
-  - `GET /api/world-state`
-  - `POST /api/webhook`
+- Some API routes under `src/app/api/*` still return `501 NOT_IMPLEMENTED` (not exhaustive):
+  - `GET /api/agent/[username]`
+  - `POST /api/guild/create`
+  - `POST /api/guild/join`
+  - `POST /api/guild/leave`
+  - `GET /api/guild/[guild_name]`
 - Frontend spectator map + UI overlays
 - Background schedulers (quest refresh, party timeout) + webhook delivery
 
@@ -90,9 +96,6 @@ Execution-level translation of those docs:
   - [ ] equipment equip/unequip (inventory + slots)
 
 ### Next (after core loop works)
-- [ ] `GET /api/world-state`
-- [ ] `GET /api/leaderboard`
-- [ ] `POST /api/webhook`
 - [ ] Background jobs (quest refresh + party timeout)
 - [ ] PixiJS map scaffold + polling
 
@@ -133,4 +136,5 @@ Determinism checks:
 - Added `npm test` (Node-compiled subset test runner) + ignored `.tmp/`
 - Implemented core deterministic helpers (progression, timing, quest resolution)
 - Implemented core API loop endpoints (`/api/create-character`, `/api/quests`, `/api/action`, `/api/dashboard`)
-- Remaining gaps: migrations, party quests, equipment handling, world-state/leaderboard/webhooks, schedulers/UI
+- Implemented spectator support endpoints (`/api/world-state`, `/api/leaderboard`, `/api/leaderboard/guilds`) + webhook registration (`/api/webhook`)
+- Remaining gaps: migrations, party quests, equipment handling, guild/agent endpoints, schedulers/UI

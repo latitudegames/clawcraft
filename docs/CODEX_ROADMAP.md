@@ -34,13 +34,19 @@ Implemented routes:
 - `GET /api/quests?location=X` (dev-only mock quest generation)
 - `POST /api/action` (solo quests only; party quests return `501`)
 - `GET /api/dashboard?username=X`
-
-Still stubbed (`501 NOT_IMPLEMENTED`):
-- `GET /api/leaderboard`
 - `GET /api/world-state`
+- `GET /api/leaderboard`
+- `GET /api/leaderboard/guilds`
 - `POST /api/webhook`
 
-### Dev-mode config (present but not wired)
+Still stubbed (`501 NOT_IMPLEMENTED`, not exhaustive):
+- `GET /api/agent/[username]`
+- `POST /api/guild/create`
+- `POST /api/guild/join`
+- `POST /api/guild/leave`
+- `GET /api/guild/[guild_name]`
+
+### Dev-mode config (present and used)
 - `src/config/dev-mode.ts` exposes `DEV_CONFIG` flags (time scale, mock LLM, seeding, verbosity).
   - `DEV_TIME_SCALE` is used to speed up quest cooldown/status cadence in API calculations.
 
