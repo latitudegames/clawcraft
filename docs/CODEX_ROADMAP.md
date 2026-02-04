@@ -1,6 +1,8 @@
-# Codex Execution Roadmap (Engineering)
+# Codex Execution Roadmap (Engineering, CLI-first)
 
-This document is **Codex’s execution-level roadmap** for working in this repo: file structure, build order, and a dev-mode/testing harness that lets me validate APIs and game logic locally.
+Last updated: **2026-02-04**
+
+This document is **Codex’s execution-level roadmap** for working in this repo: file structure, build order, and a **CLI-only** dev/testing harness that lets me validate APIs and game logic locally.
 
 **High-level product plans live elsewhere and are the source of truth**:
 - `ROADMAP.md` — phased build plan (infrastructure → mechanics → frontend → polish)
@@ -12,7 +14,45 @@ If this roadmap conflicts with those plan docs, the plan docs win (or should be 
 
 ---
 
-## 1) Current repo shape (what exists today)
+## 0) Project invariants (don’t break these)
+
+From `game-design.md`:
+- **Deterministic simulation:** once an agent submits choices, resolution is deterministic (seeded RNG). No “surprise” nondeterminism.
+- **No LLM at action-time (production intent):** quest/status content should be pre-generated, then stored. (Dev mode uses deterministic mocks.)
+- **20 status updates are generated up front** on quest selection; the map reveals them over time (time-scaled in dev).
+
+From `ROADMAP.md`:
+- **Backend determinism + contracts first**, then visuals/UI later.
+
+---
+
+## 1) Repo map (where things live)
+
+Top-level:
+- `ROADMAP.md`, `game-design.md`, `visual-design.md` — authoritative product plan/specs
+- `docs/CODEX_ROADMAP.md` — this doc (execution order + repo map)
+- `docs/CODEX_PROGRESS.md` — living progress log (source of truth for “what’s done/next/blocked”)
+- `docs/plans/*` — smaller plan docs (e.g., visual asset pipeline)
+
+Backend + tooling:
+- `prisma/schema.prisma` — DB schema (Postgres); migrations are not committed yet
+- `scripts/dev/seed.mjs` — idempotent seed (locations/connections/items)
+- `scripts/dev/smoke.mjs` — API smoke runner (calls local server endpoints)
+- `docker-compose.yml` — local Postgres container (optional but recommended)
+
+App code:
+- `src/app/api/*/route.ts` — Next.js App Router API handlers
+- `src/lib/game/*` — deterministic formulas + quest resolution + reward effects
+- `src/lib/ai/mock-llm.ts` — deterministic quest/status generators for dev mode
+- `src/lib/db/prisma.ts` — Prisma singleton
+- `src/lib/server/*` — server-only helpers used by routes
+- `src/lib/sim/smoke.ts` — offline simulation harness (no DB / no Next server)
+- `src/types/*` — shared domain + API contract types
+- `src/config/dev-mode.ts` — dev-mode flags (`DEV_TIME_SCALE`, `DEV_MOCK_LLM`, etc.)
+
+---
+
+## 2) Current repo shape (what exists today)
 
 ### Runtime stack
 - Next.js App Router (`src/app/*`)
@@ -30,21 +70,21 @@ If this roadmap conflicts with those plan docs, the plan docs win (or should be 
 
 ### API surface (currently stubbed)
 Implemented routes:
-- `POST /api/create-character`
-- `GET /api/quests?location=X` (dev-only mock quest generation)
-- `POST /api/action` (solo quests only; party quests return `501`)
-- `GET /api/dashboard?username=X`
-- `GET /api/world-state`
-- `GET /api/leaderboard`
-- `GET /api/leaderboard/guilds`
-- `POST /api/webhook`
+- `POST /api/create-character` — `src/app/api/create-character/route.ts`
+- `GET /api/quests?location=X` — `src/app/api/quests/route.ts` (dev-only mock quest generation)
+- `POST /api/action` — `src/app/api/action/route.ts` (solo quests only; party quests return `501`)
+- `GET /api/dashboard?username=X` — `src/app/api/dashboard/route.ts`
+- `GET /api/world-state` — `src/app/api/world-state/route.ts`
+- `GET /api/leaderboard` — `src/app/api/leaderboard/route.ts`
+- `GET /api/leaderboard/guilds` — `src/app/api/leaderboard/guilds/route.ts`
+- `POST /api/webhook` — `src/app/api/webhook/route.ts`
 
 Still stubbed (`501 NOT_IMPLEMENTED`, not exhaustive):
-- `GET /api/agent/[username]`
-- `POST /api/guild/create`
-- `POST /api/guild/join`
-- `POST /api/guild/leave`
-- `GET /api/guild/[guild_name]`
+- `GET /api/agent/[username]` — `src/app/api/agent/[username]/route.ts`
+- `POST /api/guild/create` — `src/app/api/guild/create/route.ts`
+- `POST /api/guild/join` — `src/app/api/guild/join/route.ts`
+- `POST /api/guild/leave` — `src/app/api/guild/leave/route.ts`
+- `GET /api/guild/[guild_name]` — `src/app/api/guild/[guild_name]/route.ts`
 
 ### Dev-mode config (present and used)
 - `src/config/dev-mode.ts` exposes `DEV_CONFIG` flags (time scale, mock LLM, seeding, verbosity).
@@ -52,7 +92,7 @@ Still stubbed (`501 NOT_IMPLEMENTED`, not exhaustive):
 
 ---
 
-## 2) Order of operations (how to build this repo safely)
+## 3) Order of operations (how to build this repo safely)
 
 This mirrors the intent of `ROADMAP.md` (backend determinism first), but translates it into **repo-local execution steps**.
 
@@ -144,7 +184,7 @@ Deliverable: humans can watch the world without interacting.
 
 ---
 
-## 3) Dev mode + self-testing harness (so I can verify changes)
+## 4) Dev mode + self-testing harness (so I can verify changes)
 
 ### Goals
 - Single-command local run that includes DB + seed + server
@@ -172,11 +212,11 @@ Deliverable: humans can watch the world without interacting.
    - `scripts/dev/seed.mjs` (via `npm run dev:seed`) to upsert:
      - locations + connections
      - starter items
+5. Offline sim (no DB / no server)
+   - `src/lib/sim/smoke.ts` (via `npm run sim:smoke`) prints a deterministic JSON payload for fast iteration
 
-### Planned next (implementation to follow this doc)
-1. Dev-only admin page (optional)
-   - `/dev` page with buttons to seed/reset and run the same smoke flow in-browser
-   - must be gated (only `NODE_ENV !== "production"` and/or a shared secret)
+### Note: CLI-only (intentionally)
+Per current direction, dev mode stays **CLI-only** (no `/dev` UI page) so it’s usable in constrained environments.
 
 ### Guardrails
 - Any dev-only routes must hard-fail in production.
@@ -184,7 +224,7 @@ Deliverable: humans can watch the world without interacting.
 
 ---
 
-## 4) “Source of truth” for ongoing work progress
+## 5) “Source of truth” for ongoing work progress
 
 Use `docs/CODEX_PROGRESS.md` as the living work log + status tracker.
 

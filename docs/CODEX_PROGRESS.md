@@ -31,8 +31,8 @@ Execution-level translation of those docs:
 - Dev/test utilities:
   - `npm test` (compiles Node test subset + runs `node --test`)
   - `npm run dev:seed` (idempotent seed: locations, connections, items)
-  - `npm run dev:smoke` (API smoke runner; becomes useful once endpoints are implemented)
-- Core API loop (requires DB + migrations):
+  - `npm run dev:smoke` (API smoke runner; requires local server + DB)
+- Core API loop (requires DB + migrations at runtime):
   - `POST /api/create-character`
   - `GET /api/quests`
   - `POST /api/action` (solo quests only; party quests return `501`)
@@ -43,7 +43,7 @@ Execution-level translation of those docs:
   - `POST /api/webhook`
 
 ### Not implemented yet (intentionally stubbed)
-- Prisma migrations/seed scripts
+- Prisma migrations are not generated/committed yet (`prisma/migrations/*` is missing)
 - Some API routes under `src/app/api/*` still return `501 NOT_IMPLEMENTED` (not exhaustive):
   - `GET /api/agent/[username]`
   - `POST /api/guild/create`
@@ -52,6 +52,13 @@ Execution-level translation of those docs:
   - `GET /api/guild/[guild_name]`
 - Frontend spectator map + UI overlays
 - Background schedulers (quest refresh, party timeout) + webhook delivery
+
+---
+
+## Blockers / constraints (current environment)
+
+- **GitHub publishing:** `gh auth status` reports the current token is invalid; need `gh auth login` before I can create/push `latitude/clawcraft`.
+- **Network access:** if `npm install` / Prisma commands fail due to restricted DNS/network in this environment, run those steps after the environment is refreshed (or on your machine) and I can resume from there.
 
 ---
 
@@ -74,29 +81,26 @@ Execution-level translation of those docs:
 5. Seed base world: `npm run dev:seed`
 6. Start server: `npm run dev`
 7. Run smoke flow: `npm run dev:smoke`
+   - Optional env overrides: `BASE_URL`, `USERNAME`, `LOCATION`
 
 Offline smoke (no npm deps / no DB):
 - `npm run sim:smoke`
+  - Optional env override: `SIM_SEED`
 
 ---
 
 ## Status
 
 ### Now (next concrete milestones)
-- [ ] Add seed path (minimum viable world):
-  - [x] locations + connections (`npm run dev:seed`)
-  - [x] item catalog (`npm run dev:seed`)
-- [ ] Implement core endpoints in dependency order:
-  - [x] `POST /api/create-character`
-  - [x] `GET /api/quests` (dev-only mock quest generation)
-  - [x] `POST /api/action` (solo quests only)
-  - [x] `GET /api/dashboard`
-- [ ] Add Prisma migrations + documented local setup:
-  - [ ] `prisma migrate dev` workflow
-  - [ ] seed-after-migrate instructions
+- [ ] Publish to GitHub (`latitude/clawcraft`) and push commits
+- [ ] Install deps + generate Prisma migrations (`npx prisma migrate dev`)
+- [ ] Validate full local loop (DB + seed + server + smoke)
 - [ ] Extend `/api/action`:
   - [ ] party quest queueing + timeouts (per `game-design.md`)
   - [ ] equipment equip/unequip (inventory + slots)
+- [ ] Implement remaining social endpoints:
+  - [ ] agent profile endpoint (`GET /api/agent/[username]`)
+  - [ ] guild endpoints (`/api/guild/*`, `/api/guild/[guild_name]`)
 
 ### Next (after core loop works)
 - [ ] Background jobs (quest refresh + party timeout)
@@ -105,6 +109,9 @@ Offline smoke (no npm deps / no DB):
 ### Done
 - [x] Created `docs/CODEX_ROADMAP.md`
 - [x] Created `docs/CODEX_PROGRESS.md`
+- [x] Seed script (`npm run dev:seed`)
+- [x] API smoke runner (`npm run dev:smoke`)
+- [x] Offline sim smoke (`npm run sim:smoke`)
 
 ---
 
