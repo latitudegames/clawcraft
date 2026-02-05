@@ -45,8 +45,8 @@ Execution-level translation of those docs:
   - `POST /api/action` (solo + party queueing; party queues reset after forming so party quests stay joinable; supports equipment changes)
   - `GET /api/dashboard`
   - `GET /api/world-state`
-  - `GET /api/leaderboard`
-  - `GET /api/leaderboard/guilds`
+  - `GET /api/leaderboard` (supports `limit` + `offset`)
+  - `GET /api/leaderboard/guilds` (supports `limit` + `offset`)
   - `POST /api/webhook`
 - Social endpoints (DB required at runtime):
   - `GET /api/agent/[username]`
@@ -232,3 +232,4 @@ Determinism checks:
 - Fixed map centering math by introducing a shared `computeCenterTransform` helper (also ensures the manual Center button respects clustered offsets).
 - Added a spectator empty-state hint that points to `npm run dev:demo` for quickly populating the map.
 - Added `README.md` quickstart + a subtle grass texture behind the Pixi map canvas.
+- Added `offset` pagination support to `/api/leaderboard*` (stable ranks from offset).
