@@ -23,6 +23,7 @@ Execution-level translation of those docs:
 - Tailwind theme tokens (`tailwind.config.ts`, `src/app/globals.css`)
 - Domain + API types (`src/types/*`)
 - Deterministic RNG + formulas + mock quest/status generators (`src/lib/**`)
+- Mock quest generation guarantees at least one solo quest per location (dev-mode).
 - Deterministic item drops by challenge rating (`src/lib/game/item-drops.ts`)
 - Prisma schema for the world (`prisma/schema.prisma`)
 - Prisma migrations committed (`prisma/migrations/*`)

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { DEV_CONFIG } from "@/config/dev-mode";
 import { mockGenerateQuest } from "@/lib/ai/mock-llm";
 import { prisma } from "@/lib/db/prisma";
+import { planMockQuestGeneration } from "@/lib/game/quest-generation";
 
 export const runtime = "nodejs";
 
@@ -11,10 +12,14 @@ const TARGET_QUESTS_PER_LOCATION = 3;
 async function ensureMockQuestsForLocation(locationId: string, locationName: string) {
   const existing = await prisma.quest.findMany({
     where: { status: "active", originId: locationId },
-    select: { id: true }
+    select: { id: true, partySize: true }
   });
-  const needed = Math.max(0, TARGET_QUESTS_PER_LOCATION - existing.length);
-  if (needed === 0) return;
+
+  const plan = planMockQuestGeneration({
+    existingPartySizes: existing.map((q) => q.partySize),
+    targetCount: TARGET_QUESTS_PER_LOCATION
+  });
+  if (plan.generateCount === 0) return;
 
   const connections = await prisma.locationConnection.findMany({
     where: { fromId: locationId },
@@ -29,12 +34,13 @@ async function ensureMockQuestsForLocation(locationId: string, locationName: str
 
   const nearbyPois = Array.from(new Set([locationName, ...destinations])).slice(0, 3);
 
-  for (let i = 0; i < needed; i++) {
+  for (let i = 0; i < plan.generateCount; i++) {
     const seed = `mock:${locationName}:q:${existing.length + i}`;
     const quest = mockGenerateQuest({
       origin: locationName,
       destinations,
       nearbyPois,
+      ...(plan.forceFirstSolo && i === 0 ? { partySize: 1 } : {}),
       seed
     });
 

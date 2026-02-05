@@ -27,6 +27,8 @@
     "src/lib/game/quest-resolution.test.ts",
     "src/lib/game/quest-effects.ts",
     "src/lib/game/quest-effects.test.ts",
+    "src/lib/game/quest-generation.ts",
+    "src/lib/game/quest-generation.test.ts",
     "src/lib/game/equipment.ts",
     "src/lib/game/equipment.test.ts",
     "src/lib/game/party-queue.ts",
