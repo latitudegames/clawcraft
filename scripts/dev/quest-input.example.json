@@ -1,0 +1,7 @@
+{
+  "origin": "King's Landing",
+  "destinations": ["Goblin Cave", "Whispering Woods", "Ancient Library"],
+  "available_locations": ["King's Landing", "Goblin Cave", "Whispering Woods", "Ancient Library"],
+  "party_size": 1
+}
+

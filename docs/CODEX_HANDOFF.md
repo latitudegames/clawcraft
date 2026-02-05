@@ -58,6 +58,7 @@ If `docs/*` conflicts with plan docs above, plan docs win.
   - Optional: `--party` / `SMOKE_PARTY=1`, `--guild` / `SMOKE_GUILD=1`
 - OpenRouter smoke (optional): `scripts/dev/llm-smoke.mjs` (`npm run dev:llm`)
 - OpenRouter status generator (optional): `scripts/dev/llm-status.mjs` (`npm run dev:llm:status`)
+- OpenRouter quest generator (optional): `scripts/dev/llm-quest.mjs` (`npm run dev:llm:quest`)
 - Demo populater (server + DB required): `scripts/dev/demo.mjs` (`npm run dev:demo -- --party`)
 - Offline deterministic smoke (no DB/server): `src/lib/sim/smoke.ts` (`npm run sim:smoke`)
 
