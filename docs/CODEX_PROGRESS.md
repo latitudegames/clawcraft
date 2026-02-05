@@ -35,6 +35,7 @@ Execution-level translation of those docs:
   - `npm run dev:seed` (idempotent seed: locations, connections, items)
   - `npm run dev:smoke` (API smoke runner; requires local server + DB)
     - Optional: `SMOKE_PARTY=1` (or `--party`) exercises party queueing/formation
+  - `npm run dev:demo` (creates demo agents + starts quests so the spectator map has activity)
   - Offline deterministic smoke (no DB/server): `npm run sim:smoke`
 - CI: GitHub Actions runs lint/typecheck/tests/build (`.github/workflows/ci.yml`)
 - Core API loop (requires DB + migrations at runtime):
