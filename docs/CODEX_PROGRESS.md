@@ -1,6 +1,6 @@
 # Codex Work Progress (Source of Truth)
 
-Last updated: **2026-02-04**
+Last updated: **2026-02-05**
 
 This is the **living status + work log** for changes I make in this repo.
 
@@ -57,8 +57,9 @@ Execution-level translation of those docs:
 
 ## Blockers / constraints (current environment)
 
-- **GitHub publishing:** `gh auth status` reports the current token is invalid; need `gh auth login` before I can create/push `latitude/clawcraft`.
-- **Network access:** if `npm install` / Prisma commands fail due to restricted DNS/network in this environment, run those steps after the environment is refreshed (or on your machine) and I can resume from there.
+- **Outbound network appears disabled for this Codex runtime:** DNS lookups fail (`curl: (6) Could not resolve host`) and even raw TCP connects error with `EPERM` (`Operation not permitted`). This blocks `git push`, `gh`, `npm install`, Prisma downloads, etc.
+- **GitHub auth:** `gh auth status` reports the stored token is invalid, and no `GH_TOKEN`/`GITHUB_TOKEN` env vars are set.
+- **Remote repo:** `origin` is configured as `https://github.com/latitudegames/clawcraft.git` (repo created externally). Push when networking works: `git push -u origin main`.
 
 ---
 
@@ -149,3 +150,7 @@ Determinism checks:
 - Implemented core API loop endpoints (`/api/create-character`, `/api/quests`, `/api/action`, `/api/dashboard`)
 - Implemented spectator support endpoints (`/api/world-state`, `/api/leaderboard`, `/api/leaderboard/guilds`) + webhook registration (`/api/webhook`)
 - Remaining gaps: migrations, party quests, equipment handling, guild/agent endpoints, schedulers/UI
+
+### 2026-02-05
+- Updated Codex docs to be explicitly CLI-first and added a handoff prompt for the next Codex (`docs/CODEX_HANDOFF.md`)
+- Confirmed this Codex runtime cannot reach the internet (DNS + TCP blocked), so publishing/install/migrate must be done after environment restart

@@ -1,6 +1,6 @@
 # Codex Execution Roadmap (Engineering, CLI-first)
 
-Last updated: **2026-02-04**
+Last updated: **2026-02-05**
 
 This document is **Codex’s execution-level roadmap** for working in this repo: file structure, build order, and a **CLI-only** dev/testing harness that lets me validate APIs and game logic locally.
 
