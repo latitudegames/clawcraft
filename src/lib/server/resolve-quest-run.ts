@@ -1,13 +1,16 @@
 import { prisma } from "@/lib/db/prisma";
 import { applyQuestResolution } from "@/lib/game/quest-effects";
 import { pickItemIdForDrop, rollItemRarity } from "@/lib/game/item-drops";
+import { buildCycleCompleteWebhook } from "@/lib/game/webhooks";
 import { partyChallengeRating } from "@/lib/game/formulas";
+import { deliverWebhooks, type WebhookDelivery } from "@/lib/server/webhook-delivery";
 import { createRng } from "@/lib/utils/rng";
+import type { LastQuestResult } from "@/types/agents";
 import type { ItemRarity } from "@/types/items";
 import type { SkillMultipliers } from "@/types/skills";
 
 export async function resolveQuestRun(runId: string, now: Date) {
-  return prisma.$transaction(async (tx) => {
+  const { run, deliveries } = await prisma.$transaction(async (tx) => {
     const run = await tx.questRun.findUnique({
       where: { id: runId },
       include: {
@@ -16,19 +19,29 @@ export async function resolveQuestRun(runId: string, now: Date) {
       }
     });
     if (!run) throw new Error(`QuestRun not found: ${runId}`);
-    if (run.resolvedAt) return run;
+    if (run.resolvedAt) return { run, deliveries: [] as WebhookDelivery[] };
 
     const lock = await tx.questRun.updateMany({
       where: { id: runId, resolvedAt: null },
       data: { resolvedAt: now }
     });
-    if (lock.count === 0) return run;
+    if (lock.count === 0) return { run, deliveries: [] as WebhookDelivery[] };
 
     const challengeRatingUsed = partyChallengeRating(run.quest.challengeRating, run.quest.partySize);
     const multipliers = run.quest.skillMultipliers as SkillMultipliers;
 
     const destinationId =
       run.outcome === "failure" && run.quest.failDestinationId ? run.quest.failDestinationId : run.quest.destinationId;
+
+    const destinationLocation = await tx.location.findUnique({
+      where: { id: destinationId },
+      select: { name: true }
+    });
+    const destinationName = destinationLocation?.name ?? "Unknown";
+
+    const questsAvailable = await tx.quest.count({
+      where: { status: "active", originId: destinationId }
+    });
 
     const allItems = await tx.item.findMany({
       select: { id: true, name: true, rarity: true }
@@ -50,6 +63,15 @@ export async function resolveQuestRun(runId: string, now: Date) {
     for (const rarity of Object.keys(itemsByRarity) as ItemRarity[]) {
       itemsByRarity[rarity].sort();
     }
+
+    const participantSummaries: Array<{
+      username: string;
+      webhookUrl: string | null;
+      xp: number;
+      gold: number;
+      unspentSkillPoints: number;
+      lastQuestResult: LastQuestResult;
+    }> = [];
 
     for (const participant of run.participants) {
       const agent = participant.agent;
@@ -121,8 +143,42 @@ export async function resolveQuestRun(runId: string, now: Date) {
           nextActionAvailableAt: null
         }
       });
+
+      participantSummaries.push({
+        username: agent.username,
+        webhookUrl: agent.webhookUrl ?? null,
+        xp: effects.agent.xp,
+        gold: effects.agent.gold,
+        unspentSkillPoints: effects.agent.unspentSkillPoints,
+        lastQuestResult: effects.agent.lastQuestResult
+      });
     }
 
-    return run;
+    const deliveries: WebhookDelivery[] = participantSummaries
+      .filter((p) => p.webhookUrl)
+      .map((p) => ({
+        url: p.webhookUrl as string,
+        event: buildCycleCompleteWebhook({
+          agent: p.username,
+          timestamp: now,
+          newLocation: destinationName,
+          questResult: p.lastQuestResult,
+          agentState: {
+            xp: p.xp,
+            gold: p.gold,
+            location: destinationName,
+            unspentSkillPoints: p.unspentSkillPoints
+          },
+          availableActions: {
+            questsAvailable,
+            canManageEquipment: true
+          }
+        })
+      }));
+
+    return { run, deliveries };
   });
+
+  await deliverWebhooks(deliveries);
+  return run;
 }

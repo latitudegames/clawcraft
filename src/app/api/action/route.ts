@@ -7,8 +7,10 @@ import { prisma } from "@/lib/db/prisma";
 import { parseSkillValues } from "@/lib/game/character";
 import { applyEquipmentChanges, getEquipmentSkillBonuses } from "@/lib/game/equipment";
 import { computePartyQuestResult, computeQuestResult } from "@/lib/game/quest-resolution";
+import { buildPartyFormedWebhook, buildPartyTimeoutWebhook } from "@/lib/game/webhooks";
 import { scaleDurationMs, questStepAt } from "@/lib/game/timing";
 import { resolveQuestRun } from "@/lib/server/resolve-quest-run";
+import { deliverWebhooks } from "@/lib/server/webhook-delivery";
 import { EQUIPMENT_SLOTS, type EquipmentSlot, type ItemDefinition } from "@/types/items";
 import { isSkill, type Skill, type SkillMultipliers } from "@/types/skills";
 import type { QuestDefinition, QuestRewards } from "@/types/quests";
@@ -360,7 +362,7 @@ export async function POST(request: Request) {
     const timeoutMs = partyQueueTimeoutMs();
 
     // Load or create the party queue, and opportunistically process timeouts so queued agents get released.
-    const queue = await prisma.$transaction(async (tx) => {
+    const { queue, refundedAgentIds } = await prisma.$transaction(async (tx) => {
       let q = await tx.questPartyQueue.findUnique({
         where: { questId: quest.id },
         include: { participants: true }
@@ -391,10 +393,28 @@ export async function POST(request: Request) {
           data: { status: "waiting", expiresAt: null },
           include: { participants: true }
         });
+
+        return { queue: q, refundedAgentIds: refundAgentIds };
       }
 
-      return q;
+      return { queue: q, refundedAgentIds: [] as string[] };
     });
+
+    if (refundedAgentIds.length) {
+      const refundedAgents = await prisma.agent.findMany({
+        where: { id: { in: refundedAgentIds } },
+        select: { username: true, webhookUrl: true }
+      });
+
+      await deliverWebhooks(
+        refundedAgents
+          .filter((a) => a.webhookUrl)
+          .map((a) => ({
+            url: a.webhookUrl as string,
+            event: buildPartyTimeoutWebhook({ agent: a.username, questName: quest.name, waitedHours: 24 })
+          }))
+      );
+    }
 
     if (queue.status !== "waiting") {
       return NextResponse.json(
@@ -611,6 +631,20 @@ export async function POST(request: Request) {
 
       return run;
     });
+
+    await deliverWebhooks(
+      partyMembers
+        .filter((m) => m.agent.webhookUrl)
+        .map((m) => ({
+          url: m.agent.webhookUrl as string,
+          event: buildPartyFormedWebhook({
+            agent: m.agent.username,
+            questName: quest.name,
+            partyMembers: usernames,
+            departureTime: now
+          })
+        }))
+    );
 
     return NextResponse.json({
       ok: true,
