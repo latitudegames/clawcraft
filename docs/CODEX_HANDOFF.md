@@ -56,6 +56,7 @@ If `docs/*` conflicts with plan docs above, plan docs win.
 - Seed (DB required): `scripts/dev/seed.mjs` (`npm run dev:seed`)
 - API smoke runner (server + DB required): `scripts/dev/smoke.mjs` (`npm run dev:smoke`)
   - Optional: `--party` / `SMOKE_PARTY=1`, `--guild` / `SMOKE_GUILD=1`
+- OpenRouter smoke (optional): `scripts/dev/llm-smoke.mjs` (`npm run dev:llm`)
 - Demo populater (server + DB required): `scripts/dev/demo.mjs` (`npm run dev:demo -- --party`)
 - Offline deterministic smoke (no DB/server): `src/lib/sim/smoke.ts` (`npm run sim:smoke`)
 
@@ -72,7 +73,7 @@ Remote:
 
 Local run (DB-backed):
 1. `docker compose up -d`
-2. Copy `.env.example` → `.env.local`
+2. Copy `.env.example` → `.env` (Prisma scripts load `.env` by default)
 3. `npm install`
 4. `npx prisma migrate dev` (generates `prisma/migrations/*`)
 5. `npm run dev:seed`

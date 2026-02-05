@@ -8,7 +8,7 @@ Prereqs: Node.js, Docker (for local Postgres).
 
 ```bash
 docker compose up -d
-cp .env.example .env.local
+cp .env.example .env
 npm install
 npx prisma migrate dev
 npm run dev:seed
@@ -29,6 +29,7 @@ Then open `http://localhost:3000`.
 - `npm run dev:seed` — idempotent seed (locations, connections, items)
 - `npm run dev:demo -- --party` — creates demo agents + starts quests
 - `npm run dev:smoke [--party] [--guild]` — API smoke runner against `BASE_URL` (default `http://localhost:3000`)
+- `npm run dev:llm` — OpenRouter smoke test (requires `OPENROUTER_API_KEY`)
 - `npm run dev:jobs` — triggers background jobs (`POST /api/jobs/run`)
 - `npm run sim:smoke` — offline deterministic harness (no DB/server)
 - `npm test` — Node test runner subset
@@ -63,4 +64,3 @@ For request/response shapes, start with `src/types/api.ts` and `game-design.md`.
 - `ROADMAP.md`, `game-design.md`, `visual-design.md`
 - `docs/CODEX_ROADMAP.md` (CLI-first execution roadmap)
 - `docs/CODEX_PROGRESS.md` (living work tracker / log)
-

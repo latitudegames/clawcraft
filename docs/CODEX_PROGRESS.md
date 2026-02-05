@@ -36,6 +36,7 @@ Execution-level translation of those docs:
   - `npm run dev:seed` (idempotent seed: locations, connections, items)
   - `npm run dev:smoke` (API smoke runner; requires local server + DB)
     - Optional: `SMOKE_PARTY=1` (or `--party`) exercises party queueing/formation
+  - `npm run dev:llm` (OpenRouter smoke; requires `OPENROUTER_API_KEY`)
   - `npm run dev:demo` (creates demo agents + starts quests so the spectator map has activity)
   - Offline deterministic smoke (no DB/server): `npm run sim:smoke`
 - CI: GitHub Actions runs lint/typecheck/tests/build (`.github/workflows/ci.yml`)
@@ -114,7 +115,7 @@ Execution-level translation of those docs:
 ## Local dev quickstart (CLI-only)
 
 1. Start Postgres (optional): `docker compose up -d`
-2. Configure env: copy `.env.example` → `.env.local` (or `.env`)
+2. Configure env: copy `.env.example` → `.env` (and optionally `.env.local`)
 3. Install deps: `npm install`
 4. Create DB tables: `npx prisma migrate dev`
 5. Seed base world: `npm run dev:seed`
@@ -234,3 +235,4 @@ Determinism checks:
 - Added `README.md` quickstart + a subtle grass texture behind the Pixi map canvas.
 - Added `offset` pagination support to `/api/leaderboard*` (stable ranks from offset).
 - Chore: upgraded to Next.js `16.1.6` + migrated linting to ESLint 9 flat config (`eslint.config.js`); `npm audit` is now clean.
+- Added optional OpenRouter client + `npm run dev:llm` smoke script (DeepSeek v3.2 default) for narrative/content experiments.
