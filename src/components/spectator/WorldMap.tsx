@@ -39,6 +39,7 @@ type PixiScene = {
 
 export function WorldMap({ world }: { world: WorldStateResponse }) {
   const { ref, size } = useElementSize<HTMLDivElement>();
+  const canvasHostRef = useRef<HTMLDivElement | null>(null);
 
   const bounds = useMemo(() => {
     const pts = world.locations.filter((l) => typeof l.x === "number" && typeof l.y === "number");
@@ -58,7 +59,7 @@ export function WorldMap({ world }: { world: WorldStateResponse }) {
   const pixi = useRef<PixiScene | null>(null);
 
   useEffect(() => {
-    const host = ref.current;
+    const host = canvasHostRef.current;
     if (!host) return;
     if (pixi.current) return;
 
@@ -219,10 +220,39 @@ export function WorldMap({ world }: { world: WorldStateResponse }) {
       onPointerCancel={onPointerUp}
       onWheel={onWheel}
     >
+      <div ref={canvasHostRef} className="absolute inset-0" />
+
       <div className="pointer-events-none absolute left-3 top-3 rounded-md border border-parchment-dark/70 bg-white/80 px-2 py-1 text-xs text-ink-brown shadow-sm">
         Drag to pan • Scroll to zoom
       </div>
+
+      {world.agents
+        .filter((a) => a.status && typeof a.x === "number" && typeof a.y === "number")
+        .slice(0, 30)
+        .map((a) => {
+          const screenX = (a.x as number) * camera.scale + camera.x;
+          const screenY = (a.y as number) * camera.scale + camera.y;
+
+          const left = clamp(screenX, 8, Math.max(8, size.width - 8));
+          const top = clamp(screenY - 34, 8, Math.max(8, size.height - 8));
+          const label = a.guild_tag ? `${a.username} [${a.guild_tag}]` : a.username;
+          const text = a.status?.text ?? "";
+          const textShort = text.length > 120 ? `${text.slice(0, 120)}…` : text;
+
+          return (
+            <div
+              key={`bubble:${a.username}`}
+              className="pointer-events-none absolute"
+              style={{ left, top, transform: "translate(-50%, -100%)" }}
+            >
+              <div className="relative max-w-[180px] rounded-xl border border-[#E0D5C5] bg-[#FFF9F0] px-3 py-2 text-xs text-ink-brown shadow-sm">
+                <div className="mb-1 truncate text-[11px] font-semibold opacity-80">{label}</div>
+                <div className="break-words">{textShort}</div>
+                <div className="absolute left-1/2 top-full h-3 w-3 -translate-x-1/2 -translate-y-1 rotate-45 border border-[#E0D5C5] bg-[#FFF9F0]" />
+              </div>
+            </div>
+          );
+        })}
     </div>
   );
 }
-
