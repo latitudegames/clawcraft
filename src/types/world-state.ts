@@ -6,6 +6,12 @@ export type WorldStateLocation = {
   y: number | null;
 };
 
+export type WorldStateConnection = {
+  from_id: string;
+  to_id: string;
+  distance: number;
+};
+
 export type WorldStateAgentStatus = {
   step: number;
   text: string;
@@ -28,6 +34,6 @@ export type WorldStateAgent = {
 export type WorldStateResponse = {
   server_time: string;
   locations: WorldStateLocation[];
+  connections: WorldStateConnection[];
   agents: WorldStateAgent[];
 };
-

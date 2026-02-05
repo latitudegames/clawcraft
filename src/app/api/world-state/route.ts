@@ -26,6 +26,20 @@ export async function GET() {
     select: { id: true, name: true, type: true, x: true, y: true }
   });
 
+  const rawConnections = await prisma.locationConnection.findMany({
+    select: { fromId: true, toId: true, distance: true }
+  });
+  const seenEdges = new Set<string>();
+  const connections = [];
+  for (const c of rawConnections) {
+    const a = c.fromId;
+    const b = c.toId;
+    const key = a < b ? `${a}:${b}` : `${b}:${a}`;
+    if (seenEdges.has(key)) continue;
+    seenEdges.add(key);
+    connections.push({ from_id: a, to_id: b, distance: c.distance });
+  }
+
   const agents = await prisma.agent.findMany({
     include: { guild: true, location: true }
   });
@@ -57,6 +71,7 @@ export async function GET() {
       x: l.x,
       y: l.y
     })),
+    connections,
     agents: agents.map((a) => {
       const run = runByAgentId.get(a.id);
       if (!run) {

@@ -258,6 +258,18 @@ export function WorldMap({
     scene.locationLabels.removeChildren().forEach((c) => c.destroy());
     scene.agentLabels.removeChildren().forEach((c) => c.destroy());
 
+    const locById = new Map(world.locations.map((l) => [l.id, l]));
+    for (const edge of world.connections) {
+      const from = locById.get(edge.from_id);
+      const to = locById.get(edge.to_id);
+      if (!from || !to) continue;
+      if (typeof from.x !== "number" || typeof from.y !== "number" || typeof to.x !== "number" || typeof to.y !== "number") continue;
+
+      scene.mapGraphics.moveTo(from.x, from.y);
+      scene.mapGraphics.lineTo(to.x, to.y);
+      scene.mapGraphics.stroke({ width: 3, color: 0x4a3728, alpha: 0.12 });
+    }
+
     for (const l of world.locations) {
       if (typeof l.x !== "number" || typeof l.y !== "number") continue;
 
@@ -331,7 +343,7 @@ export function WorldMap({
       sprite.destroy({ children: true });
       scene.spritesByUsername.delete(username);
     }
-  }, [assetsVersion, focusUsername, world.agents, world.locations]);
+  }, [assetsVersion, focusUsername, world.agents, world.connections, world.locations]);
 
   const drag = useRef<
     null | { pointerId: number; startClientX: number; startClientY: number; baseX: number; baseY: number; moved: boolean }
