@@ -242,3 +242,4 @@ Determinism checks:
 - Added OpenRouter quest generator (`npm run dev:llm:quest`) + validator tests (dev-only, no CI network calls).
 - Fixed mock status generation to end at the destination on step 20 (`traveling=false`), matching `game-design.md`.
 - Made quest refresh scheduler production-ready with an idempotent per-cycle DB guard (`QuestRefreshCycle`).
+- Added 3 more starter agent sprites (`public/assets/agents/*`) and expanded `AGENT_SPRITE_KEYS` for more visual variety on the map.
