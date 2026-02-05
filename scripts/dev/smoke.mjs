@@ -85,10 +85,20 @@ async function main() {
   console.log("GET /api/dashboard", dashboard.res.status, dashboard.url);
   console.log(dashboard.json);
 
+  const agentPublic = await request("GET", `/api/agent/${encodeURIComponent(USERNAME)}`);
+  console.log("");
+  console.log("GET /api/agent/[username]", agentPublic.res.status, agentPublic.url);
+  console.log(agentPublic.json);
+
   const worldState = await request("GET", "/api/world-state");
   console.log("");
   console.log("GET /api/world-state", worldState.res.status, worldState.url);
   console.log(worldState.json);
+
+  const jobs = await request("POST", "/api/jobs/run");
+  console.log("");
+  console.log("POST /api/jobs/run", jobs.res.status, jobs.url);
+  console.log(jobs.json);
 }
 
 main().catch((err) => {

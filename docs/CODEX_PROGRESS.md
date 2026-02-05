@@ -123,7 +123,7 @@ Offline smoke (no npm deps / no DB):
 ### Next (after core loop works)
 - [x] Add speech bubble overlay + reveal cadence (time-scaled in dev)
 - [x] Add agent card modal + search/focus
-- [ ] (Optional) Expand `scripts/dev/smoke.mjs` to cover party + guild + jobs runner
+- [ ] (Optional) Expand `scripts/dev/smoke.mjs` to cover party + guild (agent + jobs runner added)
 
 ### Done
 - [x] Created `docs/CODEX_ROADMAP.md`
@@ -189,3 +189,5 @@ Determinism checks:
 - Added spectator UI polish:
   - Speech bubble overlay (HTML) anchored to agent positions
   - Click leaderboard player → focus map on agent + open agent modal (skills, equipment, inventory, journey log, last quest)
+- Expanded API smoke script:
+  - `scripts/dev/smoke.mjs` now also calls `GET /api/agent/[username]` and `POST /api/jobs/run`
