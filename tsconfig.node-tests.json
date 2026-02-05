@@ -27,6 +27,8 @@
     "src/lib/game/quest-effects.test.ts",
     "src/lib/game/equipment.ts",
     "src/lib/game/equipment.test.ts",
+    "src/lib/game/party-queue.ts",
+    "src/lib/game/party-queue.test.ts",
     "src/lib/sim/smoke.ts",
     "src/lib/sim/smoke.test.ts",
     "src/types/**/*.ts"
