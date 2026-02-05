@@ -37,7 +37,7 @@ type PixiScene = {
   agentLabels: Container;
 };
 
-export function WorldMap({ world }: { world: WorldStateResponse }) {
+export function WorldMap({ world, focusUsername }: { world: WorldStateResponse; focusUsername?: string | null }) {
   const { ref, size } = useElementSize<HTMLDivElement>();
   const canvasHostRef = useRef<HTMLDivElement | null>(null);
 
@@ -56,6 +56,7 @@ export function WorldMap({ world }: { world: WorldStateResponse }) {
 
   const [camera, setCamera] = useState<CameraTransform>({ scale: 1, x: 0, y: 0 });
   const didInitCamera = useRef(false);
+  const focusedFor = useRef<string | null>(null);
   const pixi = useRef<PixiScene | null>(null);
 
   useEffect(() => {
@@ -135,6 +136,31 @@ export function WorldMap({ world }: { world: WorldStateResponse }) {
   }, [bounds, size.height, size.width]);
 
   useEffect(() => {
+    if (!focusUsername) {
+      focusedFor.current = null;
+      return;
+    }
+    if (focusedFor.current === focusUsername) return;
+    if (size.width <= 0 || size.height <= 0) return;
+
+    const agent = world.agents.find((a) => a.username === focusUsername);
+    const agentX = agent?.x;
+    const agentY = agent?.y;
+    if (typeof agentX !== "number" || typeof agentY !== "number") return;
+
+    const cx = size.width / 2;
+    const cy = size.height / 2;
+
+    setCamera((prev) => ({
+      ...prev,
+      x: cx - agentX * prev.scale,
+      y: cy - agentY * prev.scale
+    }));
+    didInitCamera.current = true;
+    focusedFor.current = focusUsername;
+  }, [focusUsername, size.height, size.width, world.agents]);
+
+  useEffect(() => {
     const scene = pixi.current;
     if (!scene) return;
 
@@ -159,16 +185,22 @@ export function WorldMap({ world }: { world: WorldStateResponse }) {
     for (const a of world.agents) {
       if (typeof a.x !== "number" || typeof a.y !== "number") continue;
 
-      scene.mapGraphics.circle(a.x, a.y, 4).fill({ color: a.traveling ? 0x87ceeb : 0xff6b6b, alpha: 0.95 });
+      const isFocused = Boolean(focusUsername && a.username === focusUsername);
+      const radius = isFocused ? 6 : 4;
+
+      scene.mapGraphics.circle(a.x, a.y, radius).fill({ color: a.traveling ? 0x87ceeb : 0xff6b6b, alpha: 0.95 });
+      if (isFocused) {
+        scene.mapGraphics.circle(a.x, a.y, radius + 4).stroke({ width: 3, color: 0xffd859, alpha: 0.9 });
+      }
 
       const label = new Text({
         text: a.guild_tag ? `${a.username} [${a.guild_tag}]` : a.username,
-        style: { fill: 0x4a3728, fontSize: 11 }
+        style: { fill: 0x4a3728, fontSize: isFocused ? 12 : 11, fontWeight: isFocused ? "700" : "400" }
       });
       label.position.set(a.x + 8, a.y + 6);
       scene.agentLabels.addChild(label);
     }
-  }, [world.agents, world.locations]);
+  }, [focusUsername, world.agents, world.locations]);
 
   const drag = useRef<null | { pointerId: number; startClientX: number; startClientY: number; baseX: number; baseY: number }>(null);
 
