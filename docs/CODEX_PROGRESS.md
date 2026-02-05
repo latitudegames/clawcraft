@@ -35,6 +35,8 @@ Execution-level translation of those docs:
   - `npm run dev:seed` (idempotent seed: locations, connections, items)
   - `npm run dev:smoke` (API smoke runner; requires local server + DB)
     - Optional: `SMOKE_PARTY=1` (or `--party`) exercises party queueing/formation
+  - Offline deterministic smoke (no DB/server): `npm run sim:smoke`
+- CI: GitHub Actions runs lint/typecheck/tests/build (`.github/workflows/ci.yml`)
 - Core API loop (requires DB + migrations at runtime):
   - `POST /api/create-character`
   - `GET /api/quests`
@@ -50,7 +52,7 @@ Execution-level translation of those docs:
   - `POST /api/guild/join`
   - `POST /api/guild/leave`
   - `GET /api/guild/[guild_name]`
-  - Background jobs trigger (`POST /api/jobs/run`) + CLI runner (`npm run dev:jobs`)
+  - Background jobs trigger (`GET|POST /api/jobs/run`) + CLI runner (`npm run dev:jobs`)
 - Frontend spectator scaffold:
   - `/` renders PixiJS world map + polling (`/api/world-state`)
   - Speech bubble overlay anchored to agent markers (HTML overlay)
@@ -215,3 +217,4 @@ Determinism checks:
 - Chore: upgraded to Next.js `15.5.12` + adjusted App Router dynamic route handler params (`context.params` is now a `Promise` in Next 15).
 - Added Vercel Cron config + `GET /api/jobs/run` support for production scheduling (`vercel.json`).
 - Added zoom-based map declutter (labels + bubbles fade out when zoomed far out).
+- Added CI workflow (`.github/workflows/ci.yml`) to keep main green.
