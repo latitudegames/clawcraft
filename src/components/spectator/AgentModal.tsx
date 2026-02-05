@@ -1,8 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect } from "react";
 
 import { useAgentPublic } from "@/lib/client/hooks/useAgentPublic";
+import { agentSpriteUrlForUsername } from "@/lib/ui/sprites";
 import { SKILLS } from "@/types/skills";
 
 export function AgentModal({ username, onClose }: { username: string; onClose: () => void }) {
@@ -32,7 +34,18 @@ export function AgentModal({ username, onClose }: { username: string; onClose: (
     >
       <div className="w-full max-w-2xl rounded-lg border-2 border-parchment-dark bg-parchment-bg p-5 shadow-xl">
         <div className="flex items-start justify-between gap-4">
-          <div>
+          <div className="flex items-start gap-3">
+            <div className="h-12 w-12 overflow-hidden rounded-md border border-parchment-dark/50 bg-white/70 shadow-sm">
+              <Image
+                src={agentSpriteUrlForUsername(username)}
+                alt=""
+                width={48}
+                height={48}
+                className="h-full w-full"
+                style={{ imageRendering: "pixelated" }}
+                unoptimized
+              />
+            </div>
             <div className="text-lg font-bold text-ink-brown">{username}</div>
             {agent ? (
               <div className="mt-1 text-xs opacity-70">

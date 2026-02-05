@@ -6,7 +6,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useElementSize } from "@/lib/client/hooks/useElementSize";
 import { computeFitTransform, type CameraTransform } from "@/lib/ui/camera";
-import { createRng } from "@/lib/utils/rng";
+import type { AgentSpriteKey } from "@/lib/ui/sprites";
+import { AGENT_SPRITE_KEYS, agentSpriteKeyForUsername } from "@/lib/ui/sprites";
 import type { WorldStateResponse } from "@/types/world-state";
 
 function clamp(n: number, min: number, max: number) {
@@ -35,14 +36,6 @@ function colorForLocationType(type: string): number {
     default:
       return 0xd4c4a8;
   }
-}
-
-const AGENT_SPRITE_KEYS = ["fox-rogue", "cat-mage", "hamster-knight"] as const;
-type AgentSpriteKey = (typeof AGENT_SPRITE_KEYS)[number];
-
-function spriteKeyForUsername(username: string): AgentSpriteKey {
-  const idx = createRng(username).int(0, AGENT_SPRITE_KEYS.length - 1);
-  return AGENT_SPRITE_KEYS[idx];
 }
 
 const POI_ICON_KEYS = ["kings-landing", "whispering-woods", "goblin-cave", "ancient-library", "dragon-peak"] as const;
@@ -306,7 +299,7 @@ export function WorldMap({
 
       scene.mapGraphics.circle(a.x, a.y, 8).fill({ color: 0x000000, alpha: 0.12 });
 
-      const spriteKey = spriteKeyForUsername(a.username);
+      const spriteKey = agentSpriteKeyForUsername(a.username);
       const texture = scene.agentTextures.get(spriteKey);
       const sprite = texture ? scene.spritesByUsername.get(a.username) ?? null : null;
 
