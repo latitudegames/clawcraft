@@ -23,6 +23,7 @@ Execution-level translation of those docs:
 - Tailwind theme tokens (`tailwind.config.ts`, `src/app/globals.css`)
 - Domain + API types (`src/types/*`)
 - Deterministic RNG + formulas + mock quest/status generators (`src/lib/**`)
+- Deterministic item drops by challenge rating (`src/lib/game/item-drops.ts`)
 - Prisma schema for the world (`prisma/schema.prisma`)
 - Prisma migrations committed (`prisma/migrations/*`)
 - Prisma client singleton (`src/lib/db/prisma.ts`)
@@ -48,10 +49,22 @@ Execution-level translation of those docs:
   - `POST /api/guild/join`
   - `POST /api/guild/leave`
   - `GET /api/guild/[guild_name]`
+  - Background jobs trigger (`POST /api/jobs/run`) + CLI runner (`npm run dev:jobs`)
+
+### Webhooks + background scheduling
+- Webhook registration: `POST /api/webhook`
+- Webhook delivery implemented:
+  - `cycle_complete` sent when a quest run resolves (triggered via `resolveQuestRun`)
+  - `party_formed` sent when a party quest fills and starts
+  - `party_timeout` sent when a queued party expires (opportunistic + background job)
+- Background jobs runner (`src/lib/server/jobs/run-jobs.ts`) currently performs:
+  - resolve due quest runs (sends `cycle_complete` webhooks)
+  - time out expired party queues (sends `party_timeout` webhooks)
+  - refresh quests every 12h (dev-only, mock LLM)
 
 ### Not implemented yet (intentionally stubbed)
 - Frontend spectator map + UI overlays
-- Background schedulers (quest refresh, party timeout) + webhook delivery
+- Production cron wiring for `/api/jobs/run` (use `JOB_SECRET` once deployed)
 
 ---
 
@@ -103,7 +116,7 @@ Offline smoke (no npm deps / no DB):
   - [x] guild endpoints (`/api/guild/*`, `/api/guild/[guild_name]`)
 
 ### Next (after core loop works)
-- [ ] Background jobs (quest refresh + party timeout)
+- [ ] (Optional) Expand `scripts/dev/smoke.mjs` to cover party + guild + jobs runner
 - [ ] PixiJS map scaffold + polling
 
 ### Done
@@ -161,3 +174,6 @@ Determinism checks:
   - `POST /api/action`: equipment changes + party quest queueing/formation
   - Social endpoints: `GET /api/agent/[username]`, `POST /api/guild/*`, `GET /api/guild/[guild_name]`
   - Verified locally: `docker compose up -d`, `npx prisma migrate dev`, `npm run dev:seed`, `npm run dev`, `npm run dev:smoke`
+- Implemented deterministic item drops (persisted to inventory on quest resolution)
+- Implemented webhook delivery for `cycle_complete`, `party_formed`, `party_timeout`
+- Added background jobs runner (`POST /api/jobs/run`, `npm run dev:jobs`) to resolve due runs, time out party queues, and refresh quests (dev-only)

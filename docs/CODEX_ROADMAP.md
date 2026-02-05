@@ -35,9 +35,10 @@ Top-level:
 - `docs/plans/*` — smaller plan docs (e.g., visual asset pipeline)
 
 Backend + tooling:
-- `prisma/schema.prisma` — DB schema (Postgres); migrations are not committed yet
+- `prisma/schema.prisma` — DB schema (Postgres); migrations are committed (`prisma/migrations/*`)
 - `scripts/dev/seed.mjs` — idempotent seed (locations/connections/items)
 - `scripts/dev/smoke.mjs` — API smoke runner (calls local server endpoints)
+- `scripts/dev/jobs.mjs` — background jobs runner (calls `POST /api/jobs/run`)
 - `docker-compose.yml` — local Postgres container (optional but recommended)
 
 App code:
@@ -72,19 +73,20 @@ App code:
 Implemented routes:
 - `POST /api/create-character` — `src/app/api/create-character/route.ts`
 - `GET /api/quests?location=X` — `src/app/api/quests/route.ts` (dev-only mock quest generation)
-- `POST /api/action` — `src/app/api/action/route.ts` (solo quests only; party quests return `501`)
+- `POST /api/action` — `src/app/api/action/route.ts` (solo + party queueing; equipment changes)
 - `GET /api/dashboard?username=X` — `src/app/api/dashboard/route.ts`
 - `GET /api/world-state` — `src/app/api/world-state/route.ts`
 - `GET /api/leaderboard` — `src/app/api/leaderboard/route.ts`
 - `GET /api/leaderboard/guilds` — `src/app/api/leaderboard/guilds/route.ts`
 - `POST /api/webhook` — `src/app/api/webhook/route.ts`
+- `POST /api/jobs/run` — `src/app/api/jobs/run/route.ts` (runs schedulers + timeouts; protect with `JOB_SECRET` if deployed)
 
-Still stubbed (`501 NOT_IMPLEMENTED`, not exhaustive):
-- `GET /api/agent/[username]` — `src/app/api/agent/[username]/route.ts`
-- `POST /api/guild/create` — `src/app/api/guild/create/route.ts`
-- `POST /api/guild/join` — `src/app/api/guild/join/route.ts`
-- `POST /api/guild/leave` — `src/app/api/guild/leave/route.ts`
-- `GET /api/guild/[guild_name]` — `src/app/api/guild/[guild_name]/route.ts`
+Social endpoints (implemented):
+- `GET /api/agent/[username]`
+- `POST /api/guild/create`
+- `POST /api/guild/join`
+- `POST /api/guild/leave`
+- `GET /api/guild/[guild_name]`
 
 ### Dev-mode config (present and used)
 - `src/config/dev-mode.ts` exposes `DEV_CONFIG` flags (time scale, mock LLM, seeding, verbosity).
@@ -129,6 +131,7 @@ Implement in this order (reduces dependency fan-out):
    - Validates cooldowns (`nextActionAvailableAt`)
    - Handles *optionally*:
      - quest selection + run creation (`QuestRun`, `QuestRunParticipant`)
+     - party quest queueing/formation (`QuestPartyQueue`, `QuestPartyQueueParticipant`)
      - equipment changes (inventory ↔ equipment)
      - skill point allocation
    - Computes deterministic outcome:
@@ -159,9 +162,10 @@ Deliverable: a complete agent gameplay loop purely via HTTP calls.
 ### Step C — Background jobs / scheduling
 Goal: the world evolves and parties resolve without manual triggers.
 
-1. Quest refresh scheduler (12hr)
-2. Party queue timeout job (24hr)
-3. Webhook delivery for:
+1. Quest refresh scheduler (12hr; dev-only mock for now)
+2. Party queue timeout job (24hr; implemented via `POST /api/jobs/run`)
+3. Quest run resolution sweep (sends `cycle_complete` webhooks)
+4. Webhook delivery for:
    - quest resolution (cycle complete)
    - party formed
    - party timed out
