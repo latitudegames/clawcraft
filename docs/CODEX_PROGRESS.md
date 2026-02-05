@@ -55,6 +55,7 @@ Execution-level translation of those docs:
   - Background jobs trigger (`GET|POST /api/jobs/run`) + CLI runner (`npm run dev:jobs`)
 - Frontend spectator scaffold:
   - `/` renders PixiJS world map + polling (`/api/world-state`)
+  - `/api/world-state` has a small server-side TTL cache (1s) with in-flight dedupe to reduce DB load under polling
   - Speech bubble overlay anchored to agent markers (HTML overlay)
   - Bubble overlap mitigation (deterministic stacking + viewport clamping)
   - Zoom-based declutter (hide labels + reduce bubbles when zoomed out)
@@ -218,3 +219,4 @@ Determinism checks:
 - Added Vercel Cron config + `GET /api/jobs/run` support for production scheduling (`vercel.json`).
 - Added zoom-based map declutter (labels + bubbles fade out when zoomed far out).
 - Added CI workflow (`.github/workflows/ci.yml`) to keep main green.
+- Added a small async TTL cache helper + wired it into `/api/world-state` to dedupe frequent polls.

@@ -4,12 +4,17 @@ import { DEV_CONFIG } from "@/config/dev-mode";
 import { prisma } from "@/lib/db/prisma";
 import { scaleDurationMs, questStepInfoAt } from "@/lib/game/timing";
 import { resolveQuestRun } from "@/lib/server/resolve-quest-run";
+import { createAsyncTtlCache } from "@/lib/utils/async-ttl-cache";
+import type { WorldStateResponse } from "@/types/world-state";
 
 export const runtime = "nodejs";
 
 const COOLDOWN_MS = 12 * 60 * 60 * 1000;
 const STATUS_INTERVAL_MS = 30 * 60 * 1000;
 const STATUS_STEPS = 20;
+const WORLD_STATE_CACHE_TTL_MS = 1_000;
+
+const worldStateCache = createAsyncTtlCache<WorldStateResponse>({ ttlMs: WORLD_STATE_CACHE_TTL_MS });
 
 function cooldownMs() {
   return DEV_CONFIG.DEV_MODE ? scaleDurationMs(COOLDOWN_MS, DEV_CONFIG.TIME_SCALE) : COOLDOWN_MS;
@@ -19,7 +24,7 @@ function statusIntervalMs() {
   return DEV_CONFIG.DEV_MODE ? scaleDurationMs(STATUS_INTERVAL_MS, DEV_CONFIG.TIME_SCALE) : STATUS_INTERVAL_MS;
 }
 
-export async function GET() {
+async function computeWorldState(): Promise<WorldStateResponse> {
   const now = new Date();
 
   const locations = await prisma.location.findMany({
@@ -62,7 +67,7 @@ export async function GET() {
     for (const p of run.participants) runByAgentId.set(p.agentId, run);
   }
 
-  return NextResponse.json({
+  return {
     server_time: now.toISOString(),
     locations: locations.map((l) => ({
       id: l.id,
@@ -130,5 +135,10 @@ export async function GET() {
         status
       };
     })
-  });
+  };
+}
+
+export async function GET() {
+  const state = await worldStateCache.get(computeWorldState);
+  return NextResponse.json(state);
 }

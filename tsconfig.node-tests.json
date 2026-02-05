@@ -14,6 +14,8 @@
   "include": [
     "src/node-tests.d.ts",
     "src/lib/utils/rng.ts",
+    "src/lib/utils/async-ttl-cache.ts",
+    "src/lib/utils/async-ttl-cache.test.ts",
     "src/lib/game/formulas.ts",
     "src/lib/ai/mock-llm.ts",
     "src/lib/game/formulas.test.ts",
