@@ -16,7 +16,9 @@ Generate game assets using AI image generation + background removal.
          ↓
 2. Remove background
          ↓
-3. Transparent PNG ready for game
+3. Crop + resize to target size
+         ↓
+4. Transparent PNG ready for game
 ```
 
 ## Prompts
@@ -73,6 +75,15 @@ nanobanana generate_image \
 bg-remove remove_background \
   --input "/tmp/fox-rogue-raw.png" \
   --output "public/assets/agents/fox-rogue.png"
+
+# 3. Crop + resize (ImageMagick)
+# - Uses the alpha channel to find the non-transparent bounds, then scales with nearest-neighbor.
+geom=$(magick "public/assets/agents/fox-rogue.png" -alpha extract -threshold 10% -trim -format '%wx%h%O' info:)
+magick "public/assets/agents/fox-rogue.png" \
+  -crop "$geom" +repage \
+  -filter point -resize 56x56 \
+  -gravity center -background none -extent 64x64 \
+  "public/assets/agents/fox-rogue.png"
 ```
 
 ## Tips
@@ -82,4 +93,3 @@ bg-remove remove_background \
 - Batch similar assets together
 - Check outputs before using (AI can be inconsistent)
 - Regenerate with different seed if result is bad
-

@@ -53,6 +53,7 @@ Execution-level translation of those docs:
 - Frontend spectator scaffold:
   - `/` renders PixiJS world map + polling (`/api/world-state`)
   - Speech bubble overlay anchored to agent markers (HTML overlay)
+  - Agent sprites rendered on-map (starter set in `public/assets/agents/*`)
   - Map zoom controls (+/−/reset) + center-on-selected-agent button
   - Leaderboard panel (players/guilds tabs) wired to `/api/leaderboard*`
   - Click player row → focus map on agent + open agent modal (`GET /api/agent/[username]`)
@@ -70,7 +71,7 @@ Execution-level translation of those docs:
   - refresh quests every 12h (dev-only, mock LLM)
 
 ### Not implemented yet (intentionally stubbed)
-- Frontend spectator polish (agent sprites)
+- Frontend spectator polish (POI icons/terrain art, animation, bubble collision/clustering)
 - Production cron wiring for `/api/jobs/run` (use `JOB_SECRET` once deployed)
 
 ---
@@ -194,5 +195,6 @@ Determinism checks:
   - Map zoom controls (+/−/reset) and a manual Center button
   - Leaderboard highlights the selected player; Enter selects the top search result
   - Click agent markers on the map to open the same agent modal
+  - Starter pixel agent sprites rendered on the map (`public/assets/agents/*`, nearest-neighbor)
 - Expanded API smoke script:
   - `scripts/dev/smoke.mjs` now also calls `GET /api/agent/[username]` and `POST /api/jobs/run`
