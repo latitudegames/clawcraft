@@ -212,6 +212,9 @@ Deliverable: humans can watch the world without interacting.
      3) take an action
      4) fetch dashboard + world-state
    - runs against `http://localhost:3000` and prints concise pass/fail + payload snippets
+   - Optional flags:
+     - `--party` (or `SMOKE_PARTY=1`) exercises party queueing/formation
+     - `--guild` (or `SMOKE_GUILD=1`) exercises guild create/join/leave + guild leaderboard
 4. Dev “demo populater”
    - `scripts/dev/demo.mjs` (via `npm run dev:demo -- --party`) creates demo agents and starts quests so the spectator map has activity immediately
 5. Dev seed script
