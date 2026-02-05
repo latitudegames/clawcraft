@@ -18,6 +18,8 @@
     "src/lib/utils/async-ttl-cache.test.ts",
     "src/lib/game/formulas.ts",
     "src/lib/ai/mock-llm.ts",
+    "src/lib/ai/openrouter.ts",
+    "src/lib/ai/openrouter.test.ts",
     "src/lib/game/formulas.test.ts",
     "src/lib/game/character.ts",
     "src/lib/game/character.test.ts",
