@@ -55,6 +55,7 @@ Execution-level translation of those docs:
   - Speech bubble overlay anchored to agent markers (HTML overlay)
   - Agent sprites rendered on-map (starter set in `public/assets/agents/*`)
   - POI icons rendered on-map (starter set in `public/assets/poi/*`)
+  - Location connection lines rendered (via `connections` in `/api/world-state`)
   - Map zoom controls (+/−/reset) + center-on-selected-agent button
   - Leaderboard panel (players/guilds tabs) wired to `/api/leaderboard*`
   - Click player row → focus map on agent + open agent modal (`GET /api/agent/[username]`)
