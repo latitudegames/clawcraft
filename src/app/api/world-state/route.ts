@@ -83,6 +83,7 @@ async function computeWorldState(): Promise<WorldStateResponse> {
         return {
           username: a.username,
           guild_tag: a.guild?.tag ?? null,
+          run_id: null,
           level: a.level,
           location: a.location.name,
           x: a.location.x,
@@ -127,6 +128,7 @@ async function computeWorldState(): Promise<WorldStateResponse> {
       return {
         username: a.username,
         guild_tag: a.guild?.tag ?? null,
+        run_id: run.id,
         level: a.level,
         location: fromLoc?.name ?? a.location.name,
         x,

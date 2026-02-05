@@ -23,6 +23,7 @@ export type WorldStateAgentStatus = {
 export type WorldStateAgent = {
   username: string;
   guild_tag: string | null;
+  run_id: string | null;
   level: number;
   location: string;
   x: number | null;

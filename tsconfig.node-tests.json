@@ -41,6 +41,8 @@
     "src/lib/ui/camera.test.ts",
     "src/lib/ui/bubble-layout.ts",
     "src/lib/ui/bubble-layout.test.ts",
+    "src/lib/ui/bubble-groups.ts",
+    "src/lib/ui/bubble-groups.test.ts",
     "src/lib/ui/cluster-layout.ts",
     "src/lib/ui/cluster-layout.test.ts",
     "src/lib/ui/declutter.ts",

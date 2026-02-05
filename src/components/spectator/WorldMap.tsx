@@ -5,6 +5,7 @@ import type { PointerEvent, WheelEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useElementSize } from "@/lib/client/hooks/useElementSize";
+import { groupBubbleCandidates, selectBubbleGroups } from "@/lib/ui/bubble-groups";
 import { layoutBubbles } from "@/lib/ui/bubble-layout";
 import { computeFitTransform, type CameraTransform } from "@/lib/ui/camera";
 import { computeClusterOffsets } from "@/lib/ui/cluster-layout";
@@ -459,41 +460,56 @@ export function WorldMap({
     const bubbleLimit = bubbleLimitForScale(camera.scale, Boolean(focusedCandidate));
     if (bubbleLimit === 0) return [];
 
-    const selectedCandidates = [] as typeof allCandidates;
-    if (focusedCandidate) selectedCandidates.push(focusedCandidate);
-    for (const candidate of allCandidates) {
-      if (focusedCandidate && candidate.username === focusedCandidate.username) continue;
-      if (selectedCandidates.length >= bubbleLimit) break;
-      selectedCandidates.push(candidate);
-    }
-
-    const bubbleInputs = selectedCandidates.map((a) => {
-      const offset = agentOffsets.get(a.username);
-      const ax = (a.x as number) + (offset?.dx ?? 0);
-      const ay = (a.y as number) + (offset?.dy ?? 0);
-
-      const anchorX = ax * camera.scale + camera.x;
-      const anchorY = (ay - AGENT_SPRITE_SIZE_WORLD) * camera.scale + camera.y;
-
-      const label = a.guild_tag ? `${a.username} [${a.guild_tag}]` : a.username;
-      const text = a.status?.text ?? "";
-      const textShort = text.length > 120 ? `${text.slice(0, 120)}…` : text;
-
-      const charsPerLine = 26;
-      const lines = Math.max(1, Math.ceil(textShort.length / charsPerLine));
-      const height = 16 + 18 + lines * 16 + 12;
-
-      return {
-        id: a.username,
-        anchorX,
-        anchorY,
-        width: BUBBLE_MAX_WIDTH_PX,
-        height,
-        priority: focusedCandidate && a.username === focusedCandidate.username ? 10 : 0,
-        label,
-        text: textShort
-      };
+    const focusGroupId = focusedCandidate ? focusedCandidate.run_id ?? focusedCandidate.username : null;
+    const groups = groupBubbleCandidates({
+      candidates: allCandidates.map((a) => ({ username: a.username, run_id: a.run_id })),
+      focusUsername
     });
+    const selectedGroups = selectBubbleGroups({ groups, bubbleLimit, focusUsername });
+    const candidateByUsername = new Map(allCandidates.map((a) => [a.username, a]));
+
+    const bubbleInputs = selectedGroups
+      .map((group) => {
+        const a = candidateByUsername.get(group.representative);
+        if (!a) return null;
+
+        const offset = agentOffsets.get(a.username);
+        const ax = (a.x as number) + (offset?.dx ?? 0);
+        const ay = (a.y as number) + (offset?.dy ?? 0);
+
+        const anchorX = ax * camera.scale + camera.x;
+        const anchorY = (ay - AGENT_SPRITE_SIZE_WORLD) * camera.scale + camera.y;
+
+        const labelBase = a.guild_tag ? `${a.username} [${a.guild_tag}]` : a.username;
+        const label = group.members.length > 1 ? `${labelBase} +${group.members.length - 1}` : labelBase;
+        const text = a.status?.text ?? "";
+        const textShort = text.length > 120 ? `${text.slice(0, 120)}…` : text;
+
+        const charsPerLine = 26;
+        const lines = Math.max(1, Math.ceil(textShort.length / charsPerLine));
+        const height = 16 + 18 + lines * 16 + 12;
+
+        return {
+          id: group.id,
+          anchorX,
+          anchorY,
+          width: BUBBLE_MAX_WIDTH_PX,
+          height,
+          priority: group.id === focusGroupId ? 10 : 0,
+          label,
+          text: textShort
+        };
+      })
+      .filter(Boolean) as Array<{
+      id: string;
+      anchorX: number;
+      anchorY: number;
+      width: number;
+      height: number;
+      priority: number;
+      label: string;
+      text: string;
+    }>;
 
     const layout = layoutBubbles({
       viewport: { width: size.width, height: size.height },

@@ -60,6 +60,7 @@ Execution-level translation of those docs:
   - `/api/world-state` has a small server-side TTL cache (1s) with in-flight dedupe to reduce DB load under polling
   - Speech bubble overlay anchored to agent markers (HTML overlay)
   - Bubble overlap mitigation (deterministic stacking + viewport clamping)
+  - Party bubble dedupe: party quest runs render **one bubble per run** (label includes `+N`; focus pins the bubble to the focused party member)
   - Party/overlap readability: overlapping agents are offset into a small deterministic cluster (sprites + click targets + bubbles)
   - Zoom-based declutter (hide labels + reduce bubbles when zoomed out)
   - Agent sprites rendered on-map (starter set in `public/assets/agents/*`)
@@ -223,3 +224,4 @@ Determinism checks:
 - Added zoom-based map declutter (labels + bubbles fade out when zoomed far out).
 - Added CI workflow (`.github/workflows/ci.yml`) to keep main green.
 - Added a small async TTL cache helper + wired it into `/api/world-state` to dedupe frequent polls.
+- Added bubble grouping helper so party quest runs show one shared bubble (focus-aware).
