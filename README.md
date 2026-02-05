@@ -30,6 +30,7 @@ Then open `http://localhost:3000`.
 - `npm run dev:demo -- --party` — creates demo agents + starts quests
 - `npm run dev:smoke [--party] [--guild]` — API smoke runner against `BASE_URL` (default `http://localhost:3000`)
 - `npm run dev:llm` — OpenRouter smoke test (requires `OPENROUTER_API_KEY`)
+- `npm run dev:llm:status` — generate 20 status updates via OpenRouter (requires `OPENROUTER_API_KEY`)
 - `npm run dev:jobs` — triggers background jobs (`POST /api/jobs/run`)
 - `npm run sim:smoke` — offline deterministic harness (no DB/server)
 - `npm test` — Node test runner subset

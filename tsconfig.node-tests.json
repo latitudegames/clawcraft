@@ -20,6 +20,7 @@
     "src/lib/ai/mock-llm.ts",
     "src/lib/ai/openrouter.ts",
     "src/lib/ai/openrouter.test.ts",
+    "src/lib/ai/llm-status-script.test.ts",
     "src/lib/game/formulas.test.ts",
     "src/lib/game/character.ts",
     "src/lib/game/character.test.ts",

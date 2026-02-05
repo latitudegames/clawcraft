@@ -184,9 +184,9 @@ export function mockGenerateStatusUpdates(input: {
 
   // Build a simple travel cadence: alternate between "at POI" and "traveling" updates.
   for (let step = 1; step <= 20; step++) {
-    const traveling = step % 2 === 0;
     const isFirst = step === 1;
     const isLast = step === 20;
+    const traveling = !isFirst && !isLast && step % 2 === 0;
 
     const location = isFirst
       ? input.quest.origin

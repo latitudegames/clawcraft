@@ -217,14 +217,16 @@ Deliverable: humans can watch the world without interacting.
 	     - `--guild` (or `SMOKE_GUILD=1`) exercises guild create/join/leave + guild leaderboard
 4. Dev “LLM smoke” (optional)
    - `scripts/dev/llm-smoke.mjs` (via `npm run dev:llm`) validates OpenRouter connectivity (`OPENROUTER_API_KEY` + `OPENROUTER_MODEL`)
-5. Dev “demo populater”
-	   - `scripts/dev/demo.mjs` (via `npm run dev:demo -- --party`) creates demo agents and starts quests so the spectator map has activity immediately
-6. Dev seed script
-	   - `scripts/dev/seed.mjs` (via `npm run dev:seed`) to upsert:
-	     - locations + connections
-	     - starter items
-7. Offline sim (no DB / no server)
-	   - `src/lib/sim/smoke.ts` (via `npm run sim:smoke`) prints a deterministic JSON payload for fast iteration
+5. Dev “LLM status generator” (optional)
+   - `scripts/dev/llm-status.mjs` (via `npm run dev:llm:status`) generates + validates 20 status updates (no CI network calls)
+6. Dev “demo populater”
+		   - `scripts/dev/demo.mjs` (via `npm run dev:demo -- --party`) creates demo agents and starts quests so the spectator map has activity immediately
+7. Dev seed script
+		   - `scripts/dev/seed.mjs` (via `npm run dev:seed`) to upsert:
+		     - locations + connections
+		     - starter items
+8. Offline sim (no DB / no server)
+		   - `src/lib/sim/smoke.ts` (via `npm run sim:smoke`) prints a deterministic JSON payload for fast iteration
 
 ### Note: CLI-only (intentionally)
 Per current direction, dev mode stays **CLI-only** (no `/dev` UI page) so it’s usable in constrained environments.

@@ -37,6 +37,7 @@ Execution-level translation of those docs:
   - `npm run dev:smoke` (API smoke runner; requires local server + DB)
     - Optional: `SMOKE_PARTY=1` (or `--party`) exercises party queueing/formation
   - `npm run dev:llm` (OpenRouter smoke; requires `OPENROUTER_API_KEY`)
+  - `npm run dev:llm:status` (OpenRouter status generator; requires `OPENROUTER_API_KEY`)
   - `npm run dev:demo` (creates demo agents + starts quests so the spectator map has activity)
   - Offline deterministic smoke (no DB/server): `npm run sim:smoke`
 - CI: GitHub Actions runs lint/typecheck/tests/build (`.github/workflows/ci.yml`)
@@ -236,4 +237,6 @@ Determinism checks:
 - Added `offset` pagination support to `/api/leaderboard*` (stable ranks from offset).
 - Chore: upgraded to Next.js `16.1.6` + migrated linting to ESLint 9 flat config (`eslint.config.js`); `npm audit` is now clean.
 - Added optional OpenRouter client + `npm run dev:llm` smoke script (DeepSeek v3.2 default) for narrative/content experiments.
+- Added OpenRouter status generator (`npm run dev:llm:status`) + validator tests (dev-only, no CI network calls).
+- Fixed mock status generation to end at the destination on step 20 (`traveling=false`), matching `game-design.md`.
 - Made quest refresh scheduler production-ready with an idempotent per-cycle DB guard (`QuestRefreshCycle`).

@@ -1,0 +1,18 @@
+{
+  "quest": {
+    "name": "Clear the Goblin Cave",
+    "description": "Goblins have been raiding caravans near the cave entrance.",
+    "origin": "King's Landing",
+    "destination": "Goblin Cave",
+    "fail_destination": "Whispering Woods"
+  },
+  "available_locations": ["King's Landing", "Goblin Cave", "Whispering Woods"],
+  "agent": {
+    "username": "codex_smoke",
+    "skills_chosen": ["stealth", "lockpicking", "illusion"],
+    "custom_action": "Wait for nightfall, distract sentries with an illusion, then pick the side gate quietly."
+  },
+  "outcome": "success",
+  "party_members": null
+}
+

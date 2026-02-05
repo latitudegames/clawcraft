@@ -16,6 +16,7 @@
     "dev:smoke": "node scripts/dev/smoke.mjs",
     "dev:demo": "node scripts/dev/demo.mjs",
     "dev:llm": "node scripts/dev/llm-smoke.mjs",
+    "dev:llm:status": "node scripts/dev/llm-status.mjs",
     "dev:jobs": "node scripts/dev/jobs.mjs",
     "sim:smoke": "tsc -p tsconfig.node-tests.json && npm run node:prep && node .tmp/node-tests/lib/sim/smoke.js"
   },
