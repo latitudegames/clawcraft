@@ -55,6 +55,7 @@ Execution-level translation of those docs:
   - `/` renders PixiJS world map + polling (`/api/world-state`)
   - Speech bubble overlay anchored to agent markers (HTML overlay)
   - Bubble overlap mitigation (deterministic stacking + viewport clamping)
+  - Zoom-based declutter (hide labels + reduce bubbles when zoomed out)
   - Agent sprites rendered on-map (starter set in `public/assets/agents/*`)
   - POI icons rendered on-map (starter set in `public/assets/poi/*`)
   - Location connection lines rendered (via `connections` in `/api/world-state`)
@@ -213,3 +214,4 @@ Determinism checks:
   - Optional party flow (`SMOKE_PARTY=1` / `--party`) joins a party quest until it forms
 - Chore: upgraded to Next.js `15.5.12` + adjusted App Router dynamic route handler params (`context.params` is now a `Promise` in Next 15).
 - Added Vercel Cron config + `GET /api/jobs/run` support for production scheduling (`vercel.json`).
+- Added zoom-based map declutter (labels + bubbles fade out when zoomed far out).

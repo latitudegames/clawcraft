@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useElementSize } from "@/lib/client/hooks/useElementSize";
 import { layoutBubbles } from "@/lib/ui/bubble-layout";
 import { computeFitTransform, type CameraTransform } from "@/lib/ui/camera";
+import { bubbleLimitForScale, shouldShowAgentLabels, shouldShowLocationLabels } from "@/lib/ui/declutter";
 import type { AgentSpriteKey } from "@/lib/ui/sprites";
 import { AGENT_SPRITE_KEYS, agentSpriteKeyForUsername } from "@/lib/ui/sprites";
 import type { WorldStateResponse } from "@/types/world-state";
@@ -204,6 +205,13 @@ export function WorldMap({
     scene.world.position.set(camera.x, camera.y);
     scene.world.scale.set(camera.scale);
   }, [camera.scale, camera.x, camera.y]);
+
+  useEffect(() => {
+    const scene = pixi.current;
+    if (!scene) return;
+    scene.locationLabels.visible = shouldShowLocationLabels(camera.scale);
+    scene.agentLabels.visible = shouldShowAgentLabels(camera.scale);
+  }, [camera.scale]);
 
   useEffect(() => {
     if (didInitCamera.current) return;
@@ -425,14 +433,26 @@ export function WorldMap({
   };
 
   const bubbles = useMemo(() => {
-    const candidates = world.agents
+    const allCandidates = world.agents
       .filter((a) => a.status && typeof a.x === "number" && typeof a.y === "number")
-      .sort((a, b) => a.username.localeCompare(b.username))
-      .slice(0, 30);
+      .sort((a, b) => a.username.localeCompare(b.username));
 
     if (size.width <= 0 || size.height <= 0) return [];
 
-    const bubbleInputs = candidates.map((a) => {
+    const focusedCandidate =
+      focusUsername && allCandidates.length ? allCandidates.find((a) => a.username === focusUsername) ?? null : null;
+    const bubbleLimit = bubbleLimitForScale(camera.scale, Boolean(focusedCandidate));
+    if (bubbleLimit === 0) return [];
+
+    const selectedCandidates = [] as typeof allCandidates;
+    if (focusedCandidate) selectedCandidates.push(focusedCandidate);
+    for (const candidate of allCandidates) {
+      if (focusedCandidate && candidate.username === focusedCandidate.username) continue;
+      if (selectedCandidates.length >= bubbleLimit) break;
+      selectedCandidates.push(candidate);
+    }
+
+    const bubbleInputs = selectedCandidates.map((a) => {
       const anchorX = (a.x as number) * camera.scale + camera.x;
       const anchorY = ((a.y as number) - AGENT_SPRITE_SIZE_WORLD) * camera.scale + camera.y;
 
@@ -450,7 +470,7 @@ export function WorldMap({
         anchorY,
         width: BUBBLE_MAX_WIDTH_PX,
         height,
-        priority: focusUsername && a.username === focusUsername ? 10 : 0,
+        priority: focusedCandidate && a.username === focusedCandidate.username ? 10 : 0,
         label,
         text: textShort
       };

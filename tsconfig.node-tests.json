@@ -37,6 +37,8 @@
     "src/lib/ui/camera.test.ts",
     "src/lib/ui/bubble-layout.ts",
     "src/lib/ui/bubble-layout.test.ts",
+    "src/lib/ui/declutter.ts",
+    "src/lib/ui/declutter.test.ts",
     "src/lib/sim/smoke.ts",
     "src/lib/sim/smoke.test.ts",
     "src/types/**/*.ts"
