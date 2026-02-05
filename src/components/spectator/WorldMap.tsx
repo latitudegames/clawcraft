@@ -5,6 +5,7 @@ import type { PointerEvent, WheelEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useElementSize } from "@/lib/client/hooks/useElementSize";
+import { layoutBubbles } from "@/lib/ui/bubble-layout";
 import { computeFitTransform, type CameraTransform } from "@/lib/ui/camera";
 import type { AgentSpriteKey } from "@/lib/ui/sprites";
 import { AGENT_SPRITE_KEYS, agentSpriteKeyForUsername } from "@/lib/ui/sprites";
@@ -20,6 +21,7 @@ const AGENT_SPRITE_SCALE = 0.3;
 const AGENT_SPRITE_SIZE_WORLD = 64 * AGENT_SPRITE_SCALE;
 const POI_ICON_SCALE = 0.25;
 const POI_ICON_SIZE_WORLD = 128 * POI_ICON_SCALE;
+const BUBBLE_MAX_WIDTH_PX = 180;
 
 function colorForLocationType(type: string): number {
   switch (type) {
@@ -422,6 +424,67 @@ export function WorldMap({
     });
   };
 
+  const bubbles = useMemo(() => {
+    const candidates = world.agents
+      .filter((a) => a.status && typeof a.x === "number" && typeof a.y === "number")
+      .sort((a, b) => a.username.localeCompare(b.username))
+      .slice(0, 30);
+
+    if (size.width <= 0 || size.height <= 0) return [];
+
+    const bubbleInputs = candidates.map((a) => {
+      const anchorX = (a.x as number) * camera.scale + camera.x;
+      const anchorY = ((a.y as number) - AGENT_SPRITE_SIZE_WORLD) * camera.scale + camera.y;
+
+      const label = a.guild_tag ? `${a.username} [${a.guild_tag}]` : a.username;
+      const text = a.status?.text ?? "";
+      const textShort = text.length > 120 ? `${text.slice(0, 120)}…` : text;
+
+      const charsPerLine = 26;
+      const lines = Math.max(1, Math.ceil(textShort.length / charsPerLine));
+      const height = 16 + 18 + lines * 16 + 12;
+
+      return {
+        id: a.username,
+        anchorX,
+        anchorY,
+        width: BUBBLE_MAX_WIDTH_PX,
+        height,
+        priority: focusUsername && a.username === focusUsername ? 10 : 0,
+        label,
+        text: textShort
+      };
+    });
+
+    const layout = layoutBubbles({
+      viewport: { width: size.width, height: size.height },
+      bubbles: bubbleInputs.map(({ id, anchorX, anchorY, width, height, priority }) => ({
+        id,
+        anchorX,
+        anchorY,
+        width,
+        height,
+        priority
+      }))
+    });
+
+    const byId = new Map(layout.map((b) => [b.id, b]));
+    return bubbleInputs
+      .map((b) => {
+        const pos = byId.get(b.id);
+        if (!pos) return null;
+        return { ...b, left: pos.left, top: pos.top, zIndex: b.priority ? 40 : 10 };
+      })
+      .filter(Boolean) as Array<{
+      id: string;
+      left: number;
+      top: number;
+      zIndex: number;
+      label: string;
+      text: string;
+    }>;
+  }, [camera.scale, camera.x, camera.y, focusUsername, size.height, size.width, world.agents]);
+
   return (
     <div
       ref={ref}
@@ -525,33 +588,25 @@ export function WorldMap({
         ) : null}
       </div>
 
-      {world.agents
-        .filter((a) => a.status && typeof a.x === "number" && typeof a.y === "number")
-        .slice(0, 30)
-        .map((a) => {
-          const screenX = (a.x as number) * camera.scale + camera.x;
-          const screenY = ((a.y as number) - AGENT_SPRITE_SIZE_WORLD) * camera.scale + camera.y;
-
-          const left = clamp(screenX, 8, Math.max(8, size.width - 8));
-          const top = clamp(screenY, 8, Math.max(8, size.height - 8));
-          const label = a.guild_tag ? `${a.username} [${a.guild_tag}]` : a.username;
-          const text = a.status?.text ?? "";
-          const textShort = text.length > 120 ? `${text.slice(0, 120)}…` : text;
-
-          return (
-            <div
-              key={`bubble:${a.username}`}
-              className="pointer-events-none absolute"
-              style={{ left, top, transform: "translate(-50%, -100%)" }}
-            >
-              <div className="relative max-w-[180px] rounded-xl border border-[#E0D5C5] bg-[#FFF9F0] px-3 py-2 text-xs text-ink-brown shadow-sm">
-                <div className="mb-1 truncate text-[11px] font-semibold opacity-80">{label}</div>
-                <div className="break-words">{textShort}</div>
-                <div className="absolute left-1/2 top-full h-3 w-3 -translate-x-1/2 -translate-y-1 rotate-45 border border-[#E0D5C5] bg-[#FFF9F0]" />
-              </div>
-            </div>
-          );
-        })}
+      {bubbles.map((bubble) => (
+        <div
+          key={`bubble:${bubble.id}`}
+          className="pointer-events-none absolute"
+          style={{
+            left: bubble.left,
+            top: bubble.top,
+            zIndex: bubble.zIndex,
+            transform: "translate(-50%, -100%)",
+            transition: "left 140ms ease, top 140ms ease"
+          }}
+        >
+          <div className="relative max-w-[180px] rounded-xl border border-[#E0D5C5] bg-[#FFF9F0] px-3 py-2 text-xs text-ink-brown shadow-sm">
+            <div className="mb-1 truncate text-[11px] font-semibold opacity-80">{bubble.label}</div>
+            <div className="break-words">{bubble.text}</div>
+            <div className="absolute left-1/2 top-full h-3 w-3 -translate-x-1/2 -translate-y-1 rotate-45 border border-[#E0D5C5] bg-[#FFF9F0]" />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

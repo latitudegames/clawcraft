@@ -53,6 +53,7 @@ Execution-level translation of those docs:
 - Frontend spectator scaffold:
   - `/` renders PixiJS world map + polling (`/api/world-state`)
   - Speech bubble overlay anchored to agent markers (HTML overlay)
+  - Bubble overlap mitigation (deterministic stacking + viewport clamping)
   - Agent sprites rendered on-map (starter set in `public/assets/agents/*`)
   - POI icons rendered on-map (starter set in `public/assets/poi/*`)
   - Location connection lines rendered (via `connections` in `/api/world-state`)
@@ -73,7 +74,7 @@ Execution-level translation of those docs:
   - refresh quests every 12h (dev-only, mock LLM)
 
 ### Not implemented yet (intentionally stubbed)
-- Frontend spectator polish (terrain art, animation, bubble collision/clustering)
+- Frontend spectator polish (terrain art, animation, bubble clustering)
 - Production cron wiring for `/api/jobs/run` (use `JOB_SECRET` once deployed)
 
 ---
@@ -193,6 +194,7 @@ Determinism checks:
   - Added leaderboard panel (players/guilds tabs + search)
 - Added spectator UI polish:
   - Speech bubble overlay (HTML) anchored to agent positions
+  - Bubble overlap mitigation (deterministic stacking + viewport clamping)
   - Click leaderboard player → focus map on agent + open agent modal (skills, equipment, inventory, journey log, last quest)
   - Map zoom controls (+/−/reset) and a manual Center button
   - Leaderboard highlights the selected player; Enter selects the top search result
