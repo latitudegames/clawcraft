@@ -218,6 +218,7 @@ Determinism checks:
   - Leaderboard highlights the selected player; Enter selects the top search result
   - Click agent markers on the map to open the same agent modal
   - Agent modal shows a small sprite avatar (deterministic by username)
+  - Agent modal shows current quest progress (Step X/20) when questing
   - Starter pixel agent sprites rendered on the map (`public/assets/agents/*`, nearest-neighbor)
   - Starter POI icons rendered on the map (`public/assets/poi/*`)
   - Location connections included in `/api/world-state` and rendered as map lines
@@ -243,3 +244,4 @@ Determinism checks:
 - Fixed mock status generation to end at the destination on step 20 (`traveling=false`), matching `game-design.md`.
 - Made quest refresh scheduler production-ready with an idempotent per-cycle DB guard (`QuestRefreshCycle`).
 - Added 3 more starter agent sprites (`public/assets/agents/*`) and expanded `AGENT_SPRITE_KEYS` for more visual variety on the map.
+- Extended `GET /api/agent/[username]` to include `current_quest` and render it in the agent modal.

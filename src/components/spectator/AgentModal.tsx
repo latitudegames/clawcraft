@@ -19,6 +19,7 @@ export function AgentModal({ username, onClose }: { username: string; onClose: (
   }, [onClose]);
 
   const agent = data?.agent ?? null;
+  const current = data?.current_quest ?? null;
   const last = data?.last_quest_result ?? null;
 
   const guildLabel = agent?.guild ? `${agent.guild.name} [${agent.guild.tag}]` : null;
@@ -72,6 +73,37 @@ export function AgentModal({ username, onClose }: { username: string; onClose: (
             <div className="text-sm opacity-80">No agent data.</div>
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <div className="text-xs font-semibold uppercase tracking-wide opacity-60">Current Quest</div>
+                <div className="mt-2 rounded border border-parchment-dark/30 bg-white/60 p-3 text-xs">
+                  {current ? (
+                    <>
+                      <div className="flex flex-wrap items-baseline justify-between gap-2">
+                        <div className="truncate text-sm font-semibold">{current.quest_name}</div>
+                        <div className="rounded bg-parchment-dark/20 px-2 py-0.5 font-mono text-[11px] opacity-80">
+                          Step {current.current_step}/{current.total_steps}
+                        </div>
+                      </div>
+
+                      <div className="mt-1 text-[11px] opacity-70">
+                        {current.origin} → {current.destination}
+                      </div>
+
+                      <div className="mt-2 h-2 overflow-hidden rounded bg-parchment-dark/20">
+                        <div
+                          className="h-full rounded bg-accent-gold/60"
+                          style={{ width: `${Math.round((current.current_step / current.total_steps) * 100)}%` }}
+                        />
+                      </div>
+
+                      {current.status_text ? <div className="mt-2 text-[11px] opacity-80">{current.status_text}</div> : null}
+                    </>
+                  ) : (
+                    <div className="opacity-70">Not currently questing.</div>
+                  )}
+                </div>
+              </div>
+
               <div className="md:col-span-2">
                 <div className="text-xs font-semibold uppercase tracking-wide opacity-60">Last Quest</div>
                 <div className="mt-2 rounded border border-parchment-dark/30 bg-white/60 p-3 text-xs">
