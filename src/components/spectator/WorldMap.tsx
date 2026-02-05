@@ -12,6 +12,9 @@ function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
+const MIN_SCALE = 0.35;
+const MAX_SCALE = 8;
+
 function colorForLocationType(type: string): number {
   switch (type) {
     case "major_city":
@@ -230,7 +233,7 @@ export function WorldMap({ world, focusUsername }: { world: WorldStateResponse; 
     const cursorY = e.clientY - rect.top;
 
     const zoomIntensity = 0.0015;
-    const nextScale = clamp(camera.scale * (1 - e.deltaY * zoomIntensity), 0.35, 8);
+    const nextScale = clamp(camera.scale * (1 - e.deltaY * zoomIntensity), MIN_SCALE, MAX_SCALE);
 
     const worldX = (cursorX - camera.x) / camera.scale;
     const worldY = (cursorY - camera.y) / camera.scale;
@@ -256,6 +259,93 @@ export function WorldMap({ world, focusUsername }: { world: WorldStateResponse; 
 
       <div className="pointer-events-none absolute left-3 top-3 rounded-md border border-parchment-dark/70 bg-white/80 px-2 py-1 text-xs text-ink-brown shadow-sm">
         Drag to pan • Scroll to zoom
+      </div>
+
+      <div
+        className="absolute bottom-3 left-3 flex items-end gap-2"
+        onPointerDown={(e) => e.stopPropagation()}
+        onWheel={(e) => e.stopPropagation()}
+      >
+        <div className="flex overflow-hidden rounded-md border border-black/10 bg-white/80 text-xs text-ink-brown shadow-sm backdrop-blur">
+          <button
+            type="button"
+            className="px-3 py-2 hover:bg-white"
+            aria-label="Zoom in"
+            onClick={() => {
+              didInitCamera.current = true;
+              const cx = size.width / 2;
+              const cy = size.height / 2;
+
+              setCamera((prev) => {
+                const nextScale = clamp(prev.scale * 1.25, MIN_SCALE, MAX_SCALE);
+                const worldX = (cx - prev.x) / prev.scale;
+                const worldY = (cy - prev.y) / prev.scale;
+                return { scale: nextScale, x: cx - worldX * nextScale, y: cy - worldY * nextScale };
+              });
+            }}
+          >
+            +
+          </button>
+          <button
+            type="button"
+            className="border-l border-black/10 px-3 py-2 hover:bg-white"
+            aria-label="Zoom out"
+            onClick={() => {
+              didInitCamera.current = true;
+              const cx = size.width / 2;
+              const cy = size.height / 2;
+
+              setCamera((prev) => {
+                const nextScale = clamp(prev.scale / 1.25, MIN_SCALE, MAX_SCALE);
+                const worldX = (cx - prev.x) / prev.scale;
+                const worldY = (cy - prev.y) / prev.scale;
+                return { scale: nextScale, x: cx - worldX * nextScale, y: cy - worldY * nextScale };
+              });
+            }}
+          >
+            −
+          </button>
+          <button
+            type="button"
+            className="border-l border-black/10 px-3 py-2 hover:bg-white"
+            aria-label="Reset view"
+            onClick={() => {
+              if (!bounds) return;
+              if (size.width <= 0 || size.height <= 0) return;
+              didInitCamera.current = true;
+
+              const fit = computeFitTransform({
+                viewport: { width: size.width, height: size.height },
+                bounds,
+                padding: 48
+              });
+              setCamera({ scale: clamp(fit.scale, 0.5, 6), x: fit.x, y: fit.y });
+            }}
+          >
+            Reset
+          </button>
+        </div>
+
+        {focusUsername ? (
+          <button
+            type="button"
+            className="rounded-md border border-black/10 bg-white/80 px-3 py-2 text-xs text-ink-brown shadow-sm backdrop-blur hover:bg-white"
+            onClick={() => {
+              const agent = world.agents.find((a) => a.username === focusUsername);
+              const agentX = agent?.x;
+              const agentY = agent?.y;
+              if (typeof agentX !== "number" || typeof agentY !== "number") return;
+              if (size.width <= 0 || size.height <= 0) return;
+
+              didInitCamera.current = true;
+              const cx = size.width / 2;
+              const cy = size.height / 2;
+              setCamera((prev) => ({ ...prev, x: cx - agentX * prev.scale, y: cy - agentY * prev.scale }));
+            }}
+          >
+            Center
+          </button>
+        ) : null}
       </div>
 
       {world.agents
