@@ -39,6 +39,16 @@ export function SpectatorShell() {
                   </div>
                 </div>
 
+                {data.agents.length === 0 ? (
+                  <div className="rounded-md border border-parchment-dark/70 bg-white/70 p-4 text-sm text-ink-brown">
+                    <div className="font-semibold">No agents yet.</div>
+                    <div className="mt-1 text-xs opacity-80">
+                      In another terminal, run <code className="rounded bg-black/5 px-1 py-0.5 font-mono">npm run dev:demo -- --party</code> (or{" "}
+                      <code className="rounded bg-black/5 px-1 py-0.5 font-mono">npm run dev:smoke</code>) to populate the world.
+                    </div>
+                  </div>
+                ) : null}
+
                 <WorldMap world={data} focusUsername={selectedAgent} onSelectAgent={(username) => setSelectedAgent(username)} />
               </div>
             ) : (
