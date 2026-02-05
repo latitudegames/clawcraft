@@ -50,6 +50,9 @@ Execution-level translation of those docs:
   - `POST /api/guild/leave`
   - `GET /api/guild/[guild_name]`
   - Background jobs trigger (`POST /api/jobs/run`) + CLI runner (`npm run dev:jobs`)
+- Frontend spectator scaffold:
+  - `/` renders PixiJS world map + polling (`/api/world-state`)
+  - Leaderboard panel (players/guilds tabs) wired to `/api/leaderboard*`
 
 ### Webhooks + background scheduling
 - Webhook registration: `POST /api/webhook`
@@ -63,7 +66,7 @@ Execution-level translation of those docs:
   - refresh quests every 12h (dev-only, mock LLM)
 
 ### Not implemented yet (intentionally stubbed)
-- Frontend spectator map + UI overlays
+- Frontend spectator polish (agent sprites, bubbles, agent modal, search/focus)
 - Production cron wiring for `/api/jobs/run` (use `JOB_SECRET` once deployed)
 
 ---
@@ -116,8 +119,9 @@ Offline smoke (no npm deps / no DB):
   - [x] guild endpoints (`/api/guild/*`, `/api/guild/[guild_name]`)
 
 ### Next (after core loop works)
+- [ ] Add speech bubble overlay + reveal cadence (time-scaled in dev)
+- [ ] Add agent card modal + search/focus
 - [ ] (Optional) Expand `scripts/dev/smoke.mjs` to cover party + guild + jobs runner
-- [ ] PixiJS map scaffold + polling
 
 ### Done
 - [x] Created `docs/CODEX_ROADMAP.md`
@@ -177,3 +181,6 @@ Determinism checks:
 - Implemented deterministic item drops (persisted to inventory on quest resolution)
 - Implemented webhook delivery for `cycle_complete`, `party_formed`, `party_timeout`
 - Added background jobs runner (`POST /api/jobs/run`, `npm run dev:jobs`) to resolve due runs, time out party queues, and refresh quests (dev-only)
+- Started spectator UI scaffold:
+  - `/` polls `/api/world-state` and renders a PixiJS map (pan/zoom, POI + agent markers)
+  - Added leaderboard panel (players/guilds tabs + search)

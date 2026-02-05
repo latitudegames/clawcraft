@@ -175,7 +175,7 @@ Note: `ROADMAP.md` calls these out as “complex”. Choose infra early (Vercel 
 ### Step D — Frontend spectator experience
 Goal: the map renders world state and updates over time.
 
-1. World map scaffold (PixiJS + `@pixi/react`)
+1. World map scaffold (PixiJS v8; imperative wrapper in client component)
 2. Polling `/api/world-state` (TanStack Query)
 3. Speech bubbles + interpolation (time-scaled in dev)
 4. Leaderboard + agent cards

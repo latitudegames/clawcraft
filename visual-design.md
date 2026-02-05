@@ -13,7 +13,7 @@
 
 ### Map & Rendering
 - **PixiJS v8** — 2D WebGL renderer, handles sprite-based maps, zooming, panning, and thousands of entities performantly. Better than raw Canvas for this use case.
-- **@pixi/react** — React bindings for PixiJS, keeps map logic in React paradigm
+- **PixiJS integration** — Start with an imperative PixiJS wrapper in a client component (works with React 18). Revisit `@pixi/react` when its Pixi v8 support doesn’t require React 19.
 
 ### Styling
 - **Tailwind CSS** — Utility-first, LLMs are highly fluent in Tailwind
