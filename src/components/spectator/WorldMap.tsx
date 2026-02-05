@@ -1,11 +1,12 @@
 "use client";
 
-import { Application, Container, Graphics, Text } from "pixi.js";
+import { Application, Assets, Container, Graphics, Sprite, Text, Texture, TextureStyle } from "pixi.js";
 import type { PointerEvent, WheelEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useElementSize } from "@/lib/client/hooks/useElementSize";
 import { computeFitTransform, type CameraTransform } from "@/lib/ui/camera";
+import { createRng } from "@/lib/utils/rng";
 import type { WorldStateResponse } from "@/types/world-state";
 
 function clamp(n: number, min: number, max: number) {
@@ -14,6 +15,8 @@ function clamp(n: number, min: number, max: number) {
 
 const MIN_SCALE = 0.35;
 const MAX_SCALE = 8;
+const AGENT_SPRITE_SCALE = 0.3;
+const AGENT_SPRITE_SIZE_WORLD = 64 * AGENT_SPRITE_SCALE;
 
 function colorForLocationType(type: string): number {
   switch (type) {
@@ -32,12 +35,23 @@ function colorForLocationType(type: string): number {
   }
 }
 
+const AGENT_SPRITE_KEYS = ["fox-rogue", "cat-mage", "hamster-knight"] as const;
+type AgentSpriteKey = (typeof AGENT_SPRITE_KEYS)[number];
+
+function spriteKeyForUsername(username: string): AgentSpriteKey {
+  const idx = createRng(username).int(0, AGENT_SPRITE_KEYS.length - 1);
+  return AGENT_SPRITE_KEYS[idx];
+}
+
 type PixiScene = {
   app: Application;
   world: Container;
   mapGraphics: Graphics;
   locationLabels: Container;
+  agentSprites: Container;
   agentLabels: Container;
+  agentTextures: Map<AgentSpriteKey, Texture>;
+  spritesByUsername: Map<string, Sprite>;
 };
 
 export function WorldMap({
@@ -66,6 +80,7 @@ export function WorldMap({
   }, [world.locations]);
 
   const [camera, setCamera] = useState<CameraTransform>({ scale: 1, x: 0, y: 0 });
+  const [assetsVersion, setAssetsVersion] = useState(0);
   const didInitCamera = useRef(false);
   const focusedFor = useRef<string | null>(null);
   const pixi = useRef<PixiScene | null>(null);
@@ -79,6 +94,8 @@ export function WorldMap({
     let cancelled = false;
 
     (async () => {
+      TextureStyle.defaultOptions.scaleMode = "nearest";
+
       await app.init({
         width: Math.max(1, host.clientWidth),
         height: Math.max(1, host.clientHeight),
@@ -95,15 +112,46 @@ export function WorldMap({
       const worldContainer = new Container();
       const mapGraphics = new Graphics();
       const locationLabels = new Container();
+      const agentSprites = new Container();
       const agentLabels = new Container();
 
       worldContainer.addChild(mapGraphics);
       worldContainer.addChild(locationLabels);
+      worldContainer.addChild(agentSprites);
       worldContainer.addChild(agentLabels);
 
       app.stage.addChild(worldContainer);
 
-      pixi.current = { app, world: worldContainer, mapGraphics, locationLabels, agentLabels };
+      const agentTextures = new Map<AgentSpriteKey, Texture>();
+      const spritesByUsername = new Map<string, Sprite>();
+
+      agentSprites.sortableChildren = true;
+
+      pixi.current = {
+        app,
+        world: worldContainer,
+        mapGraphics,
+        locationLabels,
+        agentSprites,
+        agentLabels,
+        agentTextures,
+        spritesByUsername
+      };
+
+      void Promise.all(
+        AGENT_SPRITE_KEYS.map(async (key) => {
+          try {
+            const texture = (await Assets.load(`/assets/agents/${key}.png`)) as Texture;
+            if (cancelled) return;
+            agentTextures.set(key, texture);
+          } catch {
+            // Best-effort; fall back to marker circles if assets fail to load.
+          }
+        })
+      ).then(() => {
+        if (cancelled) return;
+        setAssetsVersion((v) => v + 1);
+      });
     })();
 
     return () => {
@@ -199,19 +247,46 @@ export function WorldMap({
       const isFocused = Boolean(focusUsername && a.username === focusUsername);
       const radius = isFocused ? 6 : 4;
 
-      scene.mapGraphics.circle(a.x, a.y, radius).fill({ color: a.traveling ? 0x87ceeb : 0xff6b6b, alpha: 0.95 });
+      scene.mapGraphics.circle(a.x, a.y, 8).fill({ color: 0x000000, alpha: 0.12 });
+
+      const spriteKey = spriteKeyForUsername(a.username);
+      const texture = scene.agentTextures.get(spriteKey);
+      const sprite = texture ? scene.spritesByUsername.get(a.username) ?? null : null;
+
+      if (texture) {
+        const next = sprite ?? new Sprite(texture);
+        if (!sprite) {
+          next.anchor.set(0.5, 1);
+          next.scale.set(AGENT_SPRITE_SCALE);
+          scene.agentSprites.addChild(next);
+          scene.spritesByUsername.set(a.username, next);
+        }
+        next.alpha = a.traveling ? 0.85 : 1;
+        next.position.set(a.x, a.y);
+        next.zIndex = a.y;
+      } else {
+        scene.mapGraphics.circle(a.x, a.y, radius).fill({ color: a.traveling ? 0x87ceeb : 0xff6b6b, alpha: 0.95 });
+      }
+
       if (isFocused) {
-        scene.mapGraphics.circle(a.x, a.y, radius + 4).stroke({ width: 3, color: 0xffd859, alpha: 0.9 });
+        scene.mapGraphics.circle(a.x, a.y, radius + 6).stroke({ width: 3, color: 0xffd859, alpha: 0.9 });
       }
 
       const label = new Text({
         text: a.guild_tag ? `${a.username} [${a.guild_tag}]` : a.username,
         style: { fill: 0x4a3728, fontSize: isFocused ? 12 : 11, fontWeight: isFocused ? "700" : "400" }
       });
-      label.position.set(a.x + 8, a.y + 6);
+      label.position.set(a.x + 10, a.y + 8);
       scene.agentLabels.addChild(label);
     }
-  }, [focusUsername, world.agents, world.locations]);
+
+    const seen = new Set(world.agents.map((a) => a.username));
+    for (const [username, sprite] of scene.spritesByUsername.entries()) {
+      if (seen.has(username)) continue;
+      sprite.destroy({ children: true });
+      scene.spritesByUsername.delete(username);
+    }
+  }, [assetsVersion, focusUsername, world.agents, world.locations]);
 
   const drag = useRef<
     null | { pointerId: number; startClientX: number; startClientY: number; baseX: number; baseY: number; moved: boolean }
@@ -257,14 +332,16 @@ export function WorldMap({
     const worldX = (cursorX - camera.x) / camera.scale;
     const worldY = (cursorY - camera.y) / camera.scale;
 
-    const hitRadiusWorld = 12 / camera.scale;
+    const hitRadiusWorld = 24 / camera.scale;
     const hitRadius2 = hitRadiusWorld * hitRadiusWorld;
 
     let picked: { username: string; dist2: number } | null = null;
     for (const a of world.agents) {
       if (typeof a.x !== "number" || typeof a.y !== "number") continue;
-      const dx = (a.x as number) - worldX;
-      const dy = (a.y as number) - worldY;
+      const cx = a.x as number;
+      const cy = (a.y as number) - AGENT_SPRITE_SIZE_WORLD / 2;
+      const dx = cx - worldX;
+      const dy = cy - worldY;
       const dist2 = dx * dx + dy * dy;
       if (!picked || dist2 < picked.dist2) picked = { username: a.username, dist2 };
     }
@@ -403,10 +480,10 @@ export function WorldMap({
         .slice(0, 30)
         .map((a) => {
           const screenX = (a.x as number) * camera.scale + camera.x;
-          const screenY = (a.y as number) * camera.scale + camera.y;
+          const screenY = ((a.y as number) - AGENT_SPRITE_SIZE_WORLD) * camera.scale + camera.y;
 
           const left = clamp(screenX, 8, Math.max(8, size.width - 8));
-          const top = clamp(screenY - 34, 8, Math.max(8, size.height - 8));
+          const top = clamp(screenY, 8, Math.max(8, size.height - 8));
           const label = a.guild_tag ? `${a.username} [${a.guild_tag}]` : a.username;
           const text = a.status?.text ?? "";
           const textShort = text.length > 120 ? `${text.slice(0, 120)}…` : text;
