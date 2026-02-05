@@ -375,6 +375,14 @@ export async function POST(request: Request) {
         });
       }
 
+      if (q.status === "formed" && q.participants.length === 0) {
+        q = await tx.questPartyQueue.update({
+          where: { id: q.id },
+          data: { status: "waiting", expiresAt: null },
+          include: { participants: true }
+        });
+      }
+
       const isExpiredWaiting =
         q.status === "waiting" && q.expiresAt && now >= q.expiresAt && q.participants.length < quest.partySize;
 
@@ -625,7 +633,7 @@ export async function POST(request: Request) {
 
       await tx.questPartyQueue.update({
         where: { id: queueId },
-        data: { status: "formed", expiresAt: null }
+        data: { status: "waiting", expiresAt: null }
       });
       await tx.questPartyQueueParticipant.deleteMany({ where: { queueId } });
 

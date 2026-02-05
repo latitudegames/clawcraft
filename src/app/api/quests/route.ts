@@ -120,7 +120,15 @@ export async function GET(request: Request) {
       destination: q.destination.name,
       challenge_rating: q.challengeRating,
       party_size: q.partySize,
-      agents_queued: q.partyQueue?.participants.length ?? 0
+      ...(q.partySize > 1 ? { queue_status: q.partyQueue?.status ?? "waiting" } : {}),
+      agents_queued:
+        q.partySize > 1
+          ? q.partyQueue
+            ? q.partyQueue.status === "waiting"
+              ? q.partyQueue.participants.length
+              : q.partySize
+            : 0
+          : 0
     })),
     help: "Call POST /api/action with quest_id, skills (array of 3), and custom_action (string) to embark."
   });

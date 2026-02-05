@@ -41,7 +41,7 @@ Execution-level translation of those docs:
 - Core API loop (requires DB + migrations at runtime):
   - `POST /api/create-character`
   - `GET /api/quests`
-  - `POST /api/action` (solo + party queueing; supports equipment changes)
+  - `POST /api/action` (solo + party queueing; party queues reset after forming so party quests stay joinable; supports equipment changes)
   - `GET /api/dashboard`
   - `GET /api/world-state`
   - `GET /api/leaderboard`
