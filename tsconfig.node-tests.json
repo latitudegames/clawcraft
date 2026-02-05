@@ -29,6 +29,8 @@
     "src/lib/game/equipment.test.ts",
     "src/lib/game/party-queue.ts",
     "src/lib/game/party-queue.test.ts",
+    "src/lib/game/item-drops.ts",
+    "src/lib/game/item-drops.test.ts",
     "src/lib/sim/smoke.ts",
     "src/lib/sim/smoke.test.ts",
     "src/types/**/*.ts"
