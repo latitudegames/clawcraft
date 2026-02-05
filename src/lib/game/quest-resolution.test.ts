@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { computeQuestResult } from "./quest-resolution";
+import { computePartyQuestResult, computeQuestResult } from "./quest-resolution";
+import { rollRandomFactor } from "./formulas";
 import { SKILLS, type SkillMultipliers, type SkillValues } from "../../types/skills";
 
 function makeSkills(overrides: Partial<SkillValues>): SkillValues {
@@ -52,3 +53,65 @@ test("computeQuestResult uses no rewards on failure and applies gold loss", () =
   assert.equal(result.goldLost, 12);
 });
 
+test("computePartyQuestResult sums contributions and applies a single roll for the whole party", () => {
+  const seed = "party-seed";
+  const result = computePartyQuestResult({
+    partySize: 2,
+    baseChallengeRating: 10,
+    rewards: { success: { xp: 100, gold: 50 }, partial: { xp: 50, gold: 20 } },
+    multipliers: makeMultipliers({ stealth: 1, lockpicking: 0, illusion: 0 }),
+    seed,
+    participants: [
+      {
+        skillsChosen: ["stealth", "lockpicking", "illusion"],
+        baseSkills: makeSkills({ stealth: 30 }),
+        agentGold: 1000
+      },
+      {
+        skillsChosen: ["stealth", "lockpicking", "illusion"],
+        baseSkills: makeSkills({ stealth: 20 }),
+        agentGold: 200
+      }
+    ]
+  });
+
+  assert.equal(result.outcome, "success");
+  assert.equal(result.effectiveSkill, 50);
+  assert.equal(result.randomFactor, rollRandomFactor(seed));
+  assert.equal(result.participants[0]?.contributedEffectiveSkill, 30);
+  assert.equal(result.participants[1]?.contributedEffectiveSkill, 20);
+  assert.equal(result.participants[0]?.xpGained, 125);
+  assert.equal(result.participants[1]?.xpGained, 125);
+  assert.equal(result.participants[0]?.goldGained, 50);
+  assert.equal(result.participants[1]?.goldGained, 50);
+  assert.equal(result.participants[0]?.goldLost, 0);
+  assert.equal(result.participants[1]?.goldLost, 0);
+});
+
+test("computePartyQuestResult applies gold loss per participant on failure", () => {
+  const result = computePartyQuestResult({
+    partySize: 2,
+    baseChallengeRating: 10_000,
+    rewards: { success: { xp: 100, gold: 50 }, partial: { xp: 50, gold: 20 } },
+    multipliers: makeMultipliers({ stealth: 0, lockpicking: 0, illusion: 0 }),
+    seed: "seed",
+    participants: [
+      {
+        skillsChosen: ["stealth", "lockpicking", "illusion"],
+        baseSkills: makeSkills({ stealth: 0 }),
+        agentGold: 123
+      },
+      {
+        skillsChosen: ["stealth", "lockpicking", "illusion"],
+        baseSkills: makeSkills({ stealth: 0 }),
+        agentGold: 50
+      }
+    ]
+  });
+
+  assert.equal(result.outcome, "failure");
+  assert.equal(result.participants[0]?.xpGained, 0);
+  assert.equal(result.participants[0]?.goldGained, 0);
+  assert.equal(result.participants[0]?.goldLost, 12);
+  assert.equal(result.participants[1]?.goldLost, 5);
+});
