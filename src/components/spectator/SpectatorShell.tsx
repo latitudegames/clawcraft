@@ -39,7 +39,7 @@ export function SpectatorShell() {
                   </div>
                 </div>
 
-                <WorldMap world={data} focusUsername={selectedAgent} />
+                <WorldMap world={data} focusUsername={selectedAgent} onSelectAgent={(username) => setSelectedAgent(username)} />
               </div>
             ) : (
               <div className="rounded-md border border-parchment-dark/70 bg-white/70 p-4 text-sm opacity-80">No data.</div>

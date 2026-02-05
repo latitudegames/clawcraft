@@ -40,7 +40,15 @@ type PixiScene = {
   agentLabels: Container;
 };
 
-export function WorldMap({ world, focusUsername }: { world: WorldStateResponse; focusUsername?: string | null }) {
+export function WorldMap({
+  world,
+  focusUsername,
+  onSelectAgent
+}: {
+  world: WorldStateResponse;
+  focusUsername?: string | null;
+  onSelectAgent?: (username: string) => void;
+}) {
   const { ref, size } = useElementSize<HTMLDivElement>();
   const canvasHostRef = useRef<HTMLDivElement | null>(null);
 
@@ -205,11 +213,20 @@ export function WorldMap({ world, focusUsername }: { world: WorldStateResponse; 
     }
   }, [focusUsername, world.agents, world.locations]);
 
-  const drag = useRef<null | { pointerId: number; startClientX: number; startClientY: number; baseX: number; baseY: number }>(null);
+  const drag = useRef<
+    null | { pointerId: number; startClientX: number; startClientY: number; baseX: number; baseY: number; moved: boolean }
+  >(null);
 
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId);
-    drag.current = { pointerId: e.pointerId, startClientX: e.clientX, startClientY: e.clientY, baseX: camera.x, baseY: camera.y };
+    drag.current = {
+      pointerId: e.pointerId,
+      startClientX: e.clientX,
+      startClientY: e.clientY,
+      baseX: camera.x,
+      baseY: camera.y,
+      moved: false
+    };
     didInitCamera.current = true;
   };
 
@@ -217,11 +234,44 @@ export function WorldMap({ world, focusUsername }: { world: WorldStateResponse; 
     if (!drag.current || drag.current.pointerId !== e.pointerId) return;
     const dx = e.clientX - drag.current.startClientX;
     const dy = e.clientY - drag.current.startClientY;
+    if (!drag.current.moved) {
+      if (Math.hypot(dx, dy) <= 4) return;
+      drag.current.moved = true;
+    }
     setCamera((prev) => ({ ...prev, x: drag.current!.baseX + dx, y: drag.current!.baseY + dy }));
   };
 
   const onPointerUp = (e: PointerEvent<HTMLDivElement>) => {
-    if (drag.current?.pointerId === e.pointerId) drag.current = null;
+    const state = drag.current;
+    if (!state || state.pointerId !== e.pointerId) return;
+    drag.current = null;
+
+    if (state.moved) return;
+    if (e.button !== 0) return;
+    if (!onSelectAgent) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const cursorX = e.clientX - rect.left;
+    const cursorY = e.clientY - rect.top;
+
+    const worldX = (cursorX - camera.x) / camera.scale;
+    const worldY = (cursorY - camera.y) / camera.scale;
+
+    const hitRadiusWorld = 12 / camera.scale;
+    const hitRadius2 = hitRadiusWorld * hitRadiusWorld;
+
+    let picked: { username: string; dist2: number } | null = null;
+    for (const a of world.agents) {
+      if (typeof a.x !== "number" || typeof a.y !== "number") continue;
+      const dx = (a.x as number) - worldX;
+      const dy = (a.y as number) - worldY;
+      const dist2 = dx * dx + dy * dy;
+      if (!picked || dist2 < picked.dist2) picked = { username: a.username, dist2 };
+    }
+
+    if (picked && picked.dist2 <= hitRadius2) {
+      onSelectAgent(picked.username);
+    }
   };
 
   const onWheel = (e: WheelEvent<HTMLDivElement>) => {
@@ -258,7 +308,7 @@ export function WorldMap({ world, focusUsername }: { world: WorldStateResponse; 
       <div ref={canvasHostRef} className="absolute inset-0" />
 
       <div className="pointer-events-none absolute left-3 top-3 rounded-md border border-parchment-dark/70 bg-white/80 px-2 py-1 text-xs text-ink-brown shadow-sm">
-        Drag to pan • Scroll to zoom
+        Drag to pan • Scroll/+/- to zoom{onSelectAgent ? " • Click an agent for details" : ""}
       </div>
 
       <div
