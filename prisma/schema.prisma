@@ -256,6 +256,8 @@ model QuestPartyQueueParticipant {
   queueId  String
   agentId  String
   joinedAt DateTime @default(now())
+  skillsChosen Skill[]
+  customAction String
 
   queue QuestPartyQueue @relation(fields: [queueId], references: [id], onDelete: Cascade)
   agent Agent          @relation(fields: [agentId], references: [id], onDelete: Cascade)
