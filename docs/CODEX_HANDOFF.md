@@ -55,6 +55,7 @@ If `docs/*` conflicts with plan docs above, plan docs win.
 ### CLI dev harness
 - Seed (DB required): `scripts/dev/seed.mjs` (`npm run dev:seed`)
 - API smoke runner (server + DB required): `scripts/dev/smoke.mjs` (`npm run dev:smoke`)
+- Demo populater (server + DB required): `scripts/dev/demo.mjs` (`npm run dev:demo -- --party`)
 - Offline deterministic smoke (no DB/server): `src/lib/sim/smoke.ts` (`npm run sim:smoke`)
 
 ## Repo progress / tracking rules

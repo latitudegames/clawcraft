@@ -212,11 +212,13 @@ Deliverable: humans can watch the world without interacting.
      3) take an action
      4) fetch dashboard + world-state
    - runs against `http://localhost:3000` and prints concise pass/fail + payload snippets
-4. Dev seed script
+4. Dev “demo populater”
+   - `scripts/dev/demo.mjs` (via `npm run dev:demo -- --party`) creates demo agents and starts quests so the spectator map has activity immediately
+5. Dev seed script
    - `scripts/dev/seed.mjs` (via `npm run dev:seed`) to upsert:
      - locations + connections
      - starter items
-5. Offline sim (no DB / no server)
+6. Offline sim (no DB / no server)
    - `src/lib/sim/smoke.ts` (via `npm run sim:smoke`) prints a deterministic JSON payload for fast iteration
 
 ### Note: CLI-only (intentionally)
