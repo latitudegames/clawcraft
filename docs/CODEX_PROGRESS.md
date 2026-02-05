@@ -58,6 +58,7 @@ Execution-level translation of those docs:
   - `/api/world-state` has a small server-side TTL cache (1s) with in-flight dedupe to reduce DB load under polling
   - Speech bubble overlay anchored to agent markers (HTML overlay)
   - Bubble overlap mitigation (deterministic stacking + viewport clamping)
+  - Party/overlap readability: overlapping agents are offset into a small deterministic cluster (sprites + click targets + bubbles)
   - Zoom-based declutter (hide labels + reduce bubbles when zoomed out)
   - Agent sprites rendered on-map (starter set in `public/assets/agents/*`)
   - POI icons rendered on-map (starter set in `public/assets/poi/*`)

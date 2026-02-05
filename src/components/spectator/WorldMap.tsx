@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useElementSize } from "@/lib/client/hooks/useElementSize";
 import { layoutBubbles } from "@/lib/ui/bubble-layout";
 import { computeFitTransform, type CameraTransform } from "@/lib/ui/camera";
+import { computeClusterOffsets } from "@/lib/ui/cluster-layout";
 import { bubbleLimitForScale, shouldShowAgentLabels, shouldShowLocationLabels } from "@/lib/ui/declutter";
 import type { AgentSpriteKey } from "@/lib/ui/sprites";
 import { AGENT_SPRITE_KEYS, agentSpriteKeyForUsername } from "@/lib/ui/sprites";
@@ -23,6 +24,7 @@ const AGENT_SPRITE_SIZE_WORLD = 64 * AGENT_SPRITE_SCALE;
 const POI_ICON_SCALE = 0.25;
 const POI_ICON_SIZE_WORLD = 128 * POI_ICON_SCALE;
 const BUBBLE_MAX_WIDTH_PX = 180;
+const AGENT_CLUSTER_RADIUS_WORLD = 10;
 
 function colorForLocationType(type: string): number {
   switch (type) {
@@ -89,6 +91,13 @@ export function WorldMap({
       maxY: Math.max(...ys)
     };
   }, [world.locations]);
+
+  const agentOffsets = useMemo(() => {
+    const points = world.agents
+      .filter((a) => typeof a.x === "number" && typeof a.y === "number")
+      .map((a) => ({ id: a.username, x: a.x as number, y: a.y as number }));
+    return computeClusterOffsets(points, { radius: AGENT_CLUSTER_RADIUS_WORLD });
+  }, [world.agents]);
 
   const [camera, setCamera] = useState<CameraTransform>({ scale: 1, x: 0, y: 0 });
   const [assetsVersion, setAssetsVersion] = useState(0);
@@ -236,8 +245,9 @@ export function WorldMap({
     if (size.width <= 0 || size.height <= 0) return;
 
     const agent = world.agents.find((a) => a.username === focusUsername);
-    const agentX = agent?.x;
-    const agentY = agent?.y;
+    const agentOffset = agent ? agentOffsets.get(agent.username) : null;
+    const agentX = typeof agent?.x === "number" ? (agent.x as number) + (agentOffset?.dx ?? 0) : null;
+    const agentY = typeof agent?.y === "number" ? (agent.y as number) + (agentOffset?.dy ?? 0) : null;
     if (typeof agentX !== "number" || typeof agentY !== "number") return;
 
     const cx = size.width / 2;
@@ -250,7 +260,7 @@ export function WorldMap({
     }));
     didInitCamera.current = true;
     focusedFor.current = focusUsername;
-  }, [focusUsername, size.height, size.width, world.agents]);
+  }, [agentOffsets, focusUsername, size.height, size.width, world.agents]);
 
   useEffect(() => {
     const scene = pixi.current;
@@ -304,10 +314,14 @@ export function WorldMap({
     for (const a of world.agents) {
       if (typeof a.x !== "number" || typeof a.y !== "number") continue;
 
+      const offset = agentOffsets.get(a.username);
+      const ax = (a.x as number) + (offset?.dx ?? 0);
+      const ay = (a.y as number) + (offset?.dy ?? 0);
+
       const isFocused = Boolean(focusUsername && a.username === focusUsername);
       const radius = isFocused ? 6 : 4;
 
-      scene.mapGraphics.circle(a.x, a.y, 8).fill({ color: 0x000000, alpha: 0.12 });
+      scene.mapGraphics.circle(ax, ay, 8).fill({ color: 0x000000, alpha: 0.12 });
 
       const spriteKey = agentSpriteKeyForUsername(a.username);
       const texture = scene.agentTextures.get(spriteKey);
@@ -322,21 +336,21 @@ export function WorldMap({
           scene.spritesByUsername.set(a.username, next);
         }
         next.alpha = a.traveling ? 0.85 : 1;
-        next.position.set(a.x, a.y);
-        next.zIndex = a.y;
+        next.position.set(ax, ay);
+        next.zIndex = ay;
       } else {
-        scene.mapGraphics.circle(a.x, a.y, radius).fill({ color: a.traveling ? 0x87ceeb : 0xff6b6b, alpha: 0.95 });
+        scene.mapGraphics.circle(ax, ay, radius).fill({ color: a.traveling ? 0x87ceeb : 0xff6b6b, alpha: 0.95 });
       }
 
       if (isFocused) {
-        scene.mapGraphics.circle(a.x, a.y, radius + 6).stroke({ width: 3, color: 0xffd859, alpha: 0.9 });
+        scene.mapGraphics.circle(ax, ay, radius + 6).stroke({ width: 3, color: 0xffd859, alpha: 0.9 });
       }
 
       const label = new Text({
         text: a.guild_tag ? `${a.username} [${a.guild_tag}]` : a.username,
         style: { fill: 0x4a3728, fontSize: isFocused ? 12 : 11, fontWeight: isFocused ? "700" : "400" }
       });
-      label.position.set(a.x + 10, a.y + 8);
+      label.position.set(ax + 10, ay + 8);
       scene.agentLabels.addChild(label);
     }
 
@@ -346,7 +360,7 @@ export function WorldMap({
       sprite.destroy({ children: true });
       scene.spritesByUsername.delete(username);
     }
-  }, [assetsVersion, focusUsername, world.agents, world.connections, world.locations]);
+  }, [agentOffsets, assetsVersion, focusUsername, world.agents, world.connections, world.locations]);
 
   const drag = useRef<
     null | { pointerId: number; startClientX: number; startClientY: number; baseX: number; baseY: number; moved: boolean }
@@ -398,8 +412,9 @@ export function WorldMap({
     let picked: { username: string; dist2: number } | null = null;
     for (const a of world.agents) {
       if (typeof a.x !== "number" || typeof a.y !== "number") continue;
-      const cx = a.x as number;
-      const cy = (a.y as number) - AGENT_SPRITE_SIZE_WORLD / 2;
+      const offset = agentOffsets.get(a.username);
+      const cx = (a.x as number) + (offset?.dx ?? 0);
+      const cy = (a.y as number) + (offset?.dy ?? 0) - AGENT_SPRITE_SIZE_WORLD / 2;
       const dx = cx - worldX;
       const dy = cy - worldY;
       const dist2 = dx * dx + dy * dy;
@@ -453,8 +468,12 @@ export function WorldMap({
     }
 
     const bubbleInputs = selectedCandidates.map((a) => {
-      const anchorX = (a.x as number) * camera.scale + camera.x;
-      const anchorY = ((a.y as number) - AGENT_SPRITE_SIZE_WORLD) * camera.scale + camera.y;
+      const offset = agentOffsets.get(a.username);
+      const ax = (a.x as number) + (offset?.dx ?? 0);
+      const ay = (a.y as number) + (offset?.dy ?? 0);
+
+      const anchorX = ax * camera.scale + camera.x;
+      const anchorY = (ay - AGENT_SPRITE_SIZE_WORLD) * camera.scale + camera.y;
 
       const label = a.guild_tag ? `${a.username} [${a.guild_tag}]` : a.username;
       const text = a.status?.text ?? "";
@@ -503,7 +522,7 @@ export function WorldMap({
       label: string;
       text: string;
     }>;
-  }, [camera.scale, camera.x, camera.y, focusUsername, size.height, size.width, world.agents]);
+  }, [agentOffsets, camera.scale, camera.x, camera.y, focusUsername, size.height, size.width, world.agents]);
 
   return (
     <div
