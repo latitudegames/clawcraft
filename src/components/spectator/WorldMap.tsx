@@ -564,7 +564,7 @@ export function WorldMap({
   return (
     <div
       ref={ref}
-      className="relative h-[560px] w-full overflow-hidden rounded-md border border-parchment-dark/70 bg-[#7EC850] shadow-inner"
+      className="cc-terrain-grass relative h-[560px] w-full overflow-hidden rounded-md border border-parchment-dark/70 shadow-inner"
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
