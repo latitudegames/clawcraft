@@ -4,9 +4,11 @@ import { DEV_CONFIG } from "@/config/dev-mode";
 import { mockGenerateStatusUpdates } from "@/lib/ai/mock-llm";
 import { prisma } from "@/lib/db/prisma";
 import { parseSkillValues } from "@/lib/game/character";
+import { applyEquipmentChanges, getEquipmentSkillBonuses } from "@/lib/game/equipment";
 import { computeQuestResult } from "@/lib/game/quest-resolution";
 import { scaleDurationMs, questStepAt } from "@/lib/game/timing";
 import { resolveQuestRun } from "@/lib/server/resolve-quest-run";
+import { EQUIPMENT_SLOTS, type EquipmentSlot, type ItemDefinition } from "@/types/items";
 import { isSkill, type Skill, type SkillMultipliers } from "@/types/skills";
 import type { QuestDefinition, QuestRewards } from "@/types/quests";
 
@@ -24,6 +26,25 @@ function statusIntervalMs() {
   return DEV_CONFIG.DEV_MODE ? scaleDurationMs(STATUS_INTERVAL_MS, DEV_CONFIG.TIME_SCALE) : STATUS_INTERVAL_MS;
 }
 
+function isEquipmentSlot(value: string): value is EquipmentSlot {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (EQUIPMENT_SLOTS as readonly any[]).includes(value);
+}
+
+function itemToDefinition(item: { id: string; name: string; description: string; rarity: string; slot: string; skillBonuses: unknown }): ItemDefinition {
+  return {
+    item_id: item.id,
+    name: item.name,
+    description: item.description,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    rarity: item.rarity as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    slot: item.slot as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    skill_bonuses: (item.skillBonuses as any) ?? {}
+  };
+}
+
 export async function POST(request: Request) {
   const now = new Date();
   const body = (await request.json().catch(() => null)) as unknown;
@@ -39,7 +60,11 @@ export async function POST(request: Request) {
 
   let agent = await prisma.agent.findUnique({
     where: { username },
-    include: { location: true }
+    include: {
+      location: true,
+      inventory: { include: { item: true } },
+      equipment: { include: { item: true } }
+    }
   });
   if (!agent) {
     return NextResponse.json({ ok: false, error: "AGENT_NOT_FOUND", message: "No agent exists for that username." }, { status: 404 });
@@ -54,7 +79,14 @@ export async function POST(request: Request) {
     const resolvesAt = new Date(active.run.startedAt.getTime() + cooldownMs());
     if (now >= resolvesAt) {
       await resolveQuestRun(active.runId, now);
-      agent = await prisma.agent.findUnique({ where: { id: agent.id }, include: { location: true } });
+      agent = await prisma.agent.findUnique({
+        where: { id: agent.id },
+        include: {
+          location: true,
+          inventory: { include: { item: true } },
+          equipment: { include: { item: true } }
+        }
+      });
     } else {
       const currentStep = questStepAt({
         startedAtMs: active.run.startedAt.getTime(),
@@ -120,15 +152,141 @@ export async function POST(request: Request) {
         skills: currentSkills,
         unspentSkillPoints: agent.unspentSkillPoints - totalSpend
       },
-      include: { location: true }
+      include: {
+        location: true,
+        inventory: { include: { item: true } },
+        equipment: { include: { item: true } }
+      }
     });
+  }
+
+  // Equipment management (optional; allowed even if no quest is taken).
+  if (raw.equipment && typeof raw.equipment === "object" && !Array.isArray(raw.equipment)) {
+    const equipmentObj = raw.equipment as Record<string, unknown>;
+    const equipRaw = equipmentObj.equip;
+    const unequipRaw = equipmentObj.unequip;
+
+    let equip: Partial<Record<EquipmentSlot, string>> | undefined;
+    let unequip: EquipmentSlot[] | undefined;
+
+    if (equipRaw !== undefined) {
+      if (!equipRaw || typeof equipRaw !== "object" || Array.isArray(equipRaw)) {
+        return NextResponse.json({ ok: false, error: "INVALID_EQUIP", message: "equipment.equip must be an object." }, { status: 400 });
+      }
+      equip = {};
+      for (const [slot, itemId] of Object.entries(equipRaw as Record<string, unknown>)) {
+        if (!isEquipmentSlot(slot)) {
+          return NextResponse.json({ ok: false, error: "INVALID_EQUIPMENT_SLOT", message: `Unknown equipment slot: ${slot}` }, { status: 400 });
+        }
+        if (typeof itemId !== "string" || !itemId.trim()) {
+          return NextResponse.json(
+            { ok: false, error: "INVALID_EQUIP_ITEM", message: `equipment.equip.${slot} must be a non-empty item id string.` },
+            { status: 400 }
+          );
+        }
+        equip[slot] = itemId.trim();
+      }
+    }
+
+    if (unequipRaw !== undefined) {
+      if (!Array.isArray(unequipRaw)) {
+        return NextResponse.json({ ok: false, error: "INVALID_UNEQUIP", message: "equipment.unequip must be an array of slots." }, { status: 400 });
+      }
+      unequip = [];
+      for (const slot of unequipRaw) {
+        if (typeof slot !== "string" || !isEquipmentSlot(slot)) {
+          return NextResponse.json({ ok: false, error: "INVALID_EQUIPMENT_SLOT", message: `Unknown equipment slot: ${String(slot)}` }, { status: 400 });
+        }
+        unequip.push(slot);
+      }
+      if (new Set(unequip).size !== unequip.length) {
+        return NextResponse.json({ ok: false, error: "DUPLICATE_UNEQUIP", message: "equipment.unequip must not contain duplicates." }, { status: 400 });
+      }
+    }
+
+    const wantsEquipmentChange = Boolean((equip && Object.keys(equip).length) || (unequip && unequip.length));
+    if (wantsEquipmentChange) {
+      const inventoryState = Object.fromEntries(agent.inventory.map((row) => [row.itemId, row.quantity])) as Record<string, number>;
+      const equipmentState = Object.fromEntries(agent.equipment.map((row) => [row.slot, row.itemId])) as Partial<Record<EquipmentSlot, string>>;
+
+      const itemsById: Record<string, ItemDefinition> = {};
+      for (const row of agent.inventory) itemsById[row.itemId] = itemToDefinition(row.item);
+      for (const row of agent.equipment) itemsById[row.itemId] = itemToDefinition(row.item);
+
+      const equipItemIds = Object.values(equip ?? {});
+      const missingItemIds = equipItemIds.filter((id) => id && !itemsById[id]);
+      if (missingItemIds.length) {
+        const missing = await prisma.item.findMany({ where: { id: { in: missingItemIds } } });
+        for (const item of missing) itemsById[item.id] = itemToDefinition(item);
+      }
+
+      let next;
+      try {
+        next = applyEquipmentChanges({
+          inventory: inventoryState,
+          equipment: equipmentState,
+          itemsById,
+          equip,
+          unequip
+        });
+      } catch (err) {
+        return NextResponse.json(
+          { ok: false, error: "INVALID_EQUIPMENT_CHANGE", message: err instanceof Error ? err.message : "Invalid equipment change." },
+          { status: 400 }
+        );
+      }
+
+      const agentId = agent.id;
+      await prisma.$transaction(async (tx) => {
+        const nextInventoryIds = Object.keys(next.inventory);
+        if (nextInventoryIds.length === 0) {
+          await tx.agentInventoryItem.deleteMany({ where: { agentId } });
+        } else {
+          await tx.agentInventoryItem.deleteMany({ where: { agentId, itemId: { notIn: nextInventoryIds } } });
+        }
+        for (const [itemId, quantity] of Object.entries(next.inventory)) {
+          await tx.agentInventoryItem.upsert({
+            where: { agentId_itemId: { agentId, itemId } },
+            create: { agentId, itemId, quantity },
+            update: { quantity }
+          });
+        }
+
+        const nextEquipmentEntries = Object.entries(next.equipment) as [EquipmentSlot, string][];
+        const nextSlots = nextEquipmentEntries.map(([slot]) => slot);
+        if (nextSlots.length === 0) {
+          await tx.agentEquipmentItem.deleteMany({ where: { agentId } });
+        } else {
+          await tx.agentEquipmentItem.deleteMany({ where: { agentId, slot: { notIn: nextSlots } } });
+        }
+        for (const [slot, itemId] of nextEquipmentEntries) {
+          await tx.agentEquipmentItem.upsert({
+            where: { agentId_slot: { agentId, slot } },
+            create: { agentId, slot, itemId },
+            update: { itemId }
+          });
+        }
+      });
+
+      agent = await prisma.agent.findUnique({
+        where: { id: agentId },
+        include: {
+          location: true,
+          inventory: { include: { item: true } },
+          equipment: { include: { item: true } }
+        }
+      });
+      if (!agent) {
+        return NextResponse.json({ ok: false, error: "AGENT_STATE_ERROR", message: "Failed to load agent after equipment update." }, { status: 500 });
+      }
+    }
   }
 
   const questRaw = raw.quest;
   if (!questRaw) {
     return NextResponse.json({
       ok: true,
-      message: "No quest taken. Applied any skill point changes.",
+      message: "No quest taken. Applied any skill point and equipment changes.",
       agent: { username: agent.username, level: agent.level, xp: agent.xp, gold: agent.gold, unspent_skill_points: agent.unspentSkillPoints }
     });
   }
@@ -203,6 +361,11 @@ export async function POST(request: Request) {
   const multipliers = quest.skillMultipliers as SkillMultipliers;
   const rewards = quest.rewards as QuestRewards;
 
+  const equippedItems: Record<string, ItemDefinition> = {};
+  const currentEquipmentState = Object.fromEntries(agent.equipment.map((row) => [row.slot, row.itemId])) as Partial<Record<EquipmentSlot, string>>;
+  for (const row of agent.equipment) equippedItems[row.itemId] = itemToDefinition(row.item);
+  const equipmentBonuses = getEquipmentSkillBonuses({ equipment: currentEquipmentState, itemsById: equippedItems });
+
   const seed = `run:${agent.id}:${quest.id}:${now.toISOString()}`;
   const result = computeQuestResult({
     partySize: quest.partySize,
@@ -211,6 +374,7 @@ export async function POST(request: Request) {
     skillsChosen: skills,
     baseSkills: agentSkills,
     multipliers,
+    equipmentBonuses,
     seed,
     agentGold: agent.gold
   });
