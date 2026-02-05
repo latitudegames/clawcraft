@@ -57,8 +57,8 @@ Execution-level translation of those docs:
 
 ## Blockers / constraints (current environment)
 
-- **Local Postgres is still blocked here:** Docker daemon is not available and Postgres CLI (`psql`) is not installed, so I can’t run the DB-backed loop (`prisma migrate dev`, `dev:seed`, `dev`, `dev:smoke`) in this environment.
-- Networking is working again (able to `npm install` and `git push`).
+- Networking is working (able to `npm install` and `git push`).
+- Local Postgres works via Docker (`docker compose up -d`). If `docker compose` is missing (common when `docker` is installed via Homebrew), install the plugin (`brew install docker-compose`) and add `cliPluginsExtraDirs` to `~/.docker/config.json` as per the Homebrew caveats.
 
 ---
 
@@ -94,7 +94,7 @@ Offline smoke (no npm deps / no DB):
 ### Now (next concrete milestones)
 - [x] Publish to GitHub (`latitudegames/clawcraft`) and push commits
 - [x] Install deps + generate Prisma migrations (offline diff; commit `prisma/migrations/*`)
-- [ ] Validate full local loop (DB + seed + server + smoke) — blocked on local Postgres
+- [x] Validate full local loop (DB + seed + server + smoke)
 - [x] Extend `/api/action`:
   - [x] party quest queueing + timeouts (per `game-design.md`)
   - [x] equipment equip/unequip (inventory + slots)
@@ -157,6 +157,7 @@ Determinism checks:
 - Added deterministic modules + tests:
   - Equipment inventory/slot swap helpers (`src/lib/game/equipment.ts`)
   - Party quest resolution + queue helpers (`src/lib/game/quest-resolution.ts`, `src/lib/game/party-queue.ts`)
-- Implemented DB-backed API behavior (not runtime-tested here due to Postgres blocker):
+- Implemented + validated DB-backed API behavior:
   - `POST /api/action`: equipment changes + party quest queueing/formation
   - Social endpoints: `GET /api/agent/[username]`, `POST /api/guild/*`, `GET /api/guild/[guild_name]`
+  - Verified locally: `docker compose up -d`, `npx prisma migrate dev`, `npm run dev:seed`, `npm run dev`, `npm run dev:smoke`
