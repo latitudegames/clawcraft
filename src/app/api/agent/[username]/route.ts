@@ -21,8 +21,8 @@ function itemToDefinition(item: { id: string; name: string; description: string;
   };
 }
 
-export async function GET(_request: Request, context: { params: { username: string } }) {
-  const username = context.params.username;
+export async function GET(_request: Request, context: { params: Promise<{ username: string }> }) {
+  const { username } = await context.params;
   const agent = await prisma.agent.findUnique({
     where: { username },
     include: {

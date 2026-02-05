@@ -4,8 +4,8 @@ import { prisma } from "@/lib/db/prisma";
 
 export const runtime = "nodejs";
 
-export async function GET(_request: Request, context: { params: { guild_name: string } }) {
-  const guildName = context.params.guild_name;
+export async function GET(_request: Request, context: { params: Promise<{ guild_name: string }> }) {
+  const { guild_name: guildName } = await context.params;
   const guild = await prisma.guild.findUnique({
     where: { name: guildName },
     include: {

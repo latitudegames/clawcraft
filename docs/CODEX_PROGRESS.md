@@ -83,6 +83,7 @@ Execution-level translation of those docs:
 
 - Networking is working (able to `npm install` and `git push`).
 - Local Postgres works via Docker (`docker compose up -d`). If `docker compose` is missing (common when `docker` is installed via Homebrew), install the plugin (`brew install docker-compose`) and add `cliPluginsExtraDirs` to `~/.docker/config.json` as per the Homebrew caveats.
+- `npm audit` is down to **1 moderate** Next.js advisory; fully clearing requires a larger upgrade (Next 16 + ESLint 9) than is currently worth it.
 
 ---
 
@@ -205,3 +206,4 @@ Determinism checks:
   - Location connections included in `/api/world-state` and rendered as map lines
 - Expanded API smoke script:
   - `scripts/dev/smoke.mjs` now also calls `GET /api/agent/[username]` and `POST /api/jobs/run`
+- Chore: upgraded to Next.js `15.5.12` + adjusted App Router dynamic route handler params (`context.params` is now a `Promise` in Next 15).
