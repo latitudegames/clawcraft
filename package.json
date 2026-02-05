@@ -14,6 +14,7 @@
     "test": "npm run test:node",
     "dev:seed": "node scripts/dev/seed.mjs",
     "dev:smoke": "node scripts/dev/smoke.mjs",
+    "dev:jobs": "node scripts/dev/jobs.mjs",
     "sim:smoke": "tsc -p tsconfig.node-tests.json && npm run node:prep && node .tmp/node-tests/lib/sim/smoke.js"
   },
   "dependencies": {

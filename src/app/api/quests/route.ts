@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import { DEV_CONFIG } from "@/config/dev-mode";
 import { mockGenerateQuest } from "@/lib/ai/mock-llm";
 import { prisma } from "@/lib/db/prisma";
-import { scaleDurationMs } from "@/lib/game/timing";
 
 export const runtime = "nodejs";
 
@@ -75,22 +74,6 @@ async function ensureMockQuestsForLocation(locationId: string, locationName: str
         nearbyPois: quest.nearby_pois_for_journey
       }
     });
-
-    if (quest.party_size > 1) {
-      const partyTimeoutMs = DEV_CONFIG.DEV_MODE ? scaleDurationMs(24 * 60 * 60 * 1000, DEV_CONFIG.TIME_SCALE) : 24 * 60 * 60 * 1000;
-      await prisma.questPartyQueue.upsert({
-        where: { questId: quest.quest_id },
-        create: {
-          questId: quest.quest_id,
-          status: "waiting",
-          expiresAt: new Date(Date.now() + partyTimeoutMs)
-        },
-        update: {
-          status: "waiting",
-          expiresAt: new Date(Date.now() + partyTimeoutMs)
-        }
-      });
-    }
   }
 }
 
