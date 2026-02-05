@@ -326,3 +326,8 @@ model QuestStatusUpdate {
   @@unique([runId, step])
   @@index([locationId])
 }
+
+model QuestRefreshCycle {
+  cycleStart DateTime @id
+  createdAt  DateTime @default(now())
+}

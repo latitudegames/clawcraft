@@ -6,6 +6,7 @@ import { scaleDurationMs } from "@/lib/game/timing";
 import { resolveQuestRun } from "@/lib/server/resolve-quest-run";
 import { deliverWebhooks, type WebhookDelivery } from "@/lib/server/webhook-delivery";
 import { createRng } from "@/lib/utils/rng";
+import { Prisma } from "@prisma/client";
 
 const COOLDOWN_MS = 12 * 60 * 60 * 1000;
 const QUEST_REFRESH_MS = 12 * 60 * 60 * 1000;
@@ -86,16 +87,24 @@ async function timeoutExpiredPartyQueues(now: Date): Promise<{ timedOut: number 
   return { timedOut };
 }
 
-async function refreshQuests(now: Date): Promise<{ cycleStart: Date; archived: number; upserted: number }> {
-  if (!DEV_CONFIG.DEV_MODE || !DEV_CONFIG.MOCK_LLM) {
-    return { cycleStart: questCycleStart(now), archived: 0, upserted: 0 };
-  }
+function isUniqueConstraintError(err: unknown): boolean {
+  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002";
+}
 
+async function refreshQuests(
+  now: Date
+): Promise<{ cycleStart: Date; archived: number; upserted: number; skipped: boolean }> {
   const cycleStart = questCycleStart(now);
+
+  const alreadyRan = await prisma.questRefreshCycle.findUnique({ where: { cycleStart }, select: { cycleStart: true } });
+  if (alreadyRan) return { cycleStart, archived: 0, upserted: 0, skipped: true };
 
   const allLocations = await prisma.location.findMany({
     select: { id: true, name: true, population: true }
   });
+  if (allLocations.length === 0) {
+    return { cycleStart, archived: 0, upserted: 0, skipped: false };
+  }
   const byName = new Map(allLocations.map((l) => [l.name, l]));
 
   const connections = await prisma.locationConnection.findMany({
@@ -197,7 +206,13 @@ async function refreshQuests(now: Date): Promise<{ cycleStart: Date; archived: n
     }
   }
 
-  return { cycleStart, archived, upserted };
+  try {
+    await prisma.questRefreshCycle.create({ data: { cycleStart } });
+  } catch (err) {
+    if (!isUniqueConstraintError(err)) throw err;
+  }
+
+  return { cycleStart, archived, upserted, skipped: false };
 }
 
 export type BackgroundJobsResult = {
@@ -209,6 +224,7 @@ export type BackgroundJobsResult = {
     cycle_start: string;
     archived_quests: number;
     upserted_quests: number;
+    skipped: boolean;
   };
 };
 
@@ -227,8 +243,8 @@ export async function runBackgroundJobs(args?: { now?: Date }): Promise<Backgrou
     quest_refresh: {
       cycle_start: refreshed.cycleStart.toISOString(),
       archived_quests: refreshed.archived,
-      upserted_quests: refreshed.upserted
+      upserted_quests: refreshed.upserted,
+      skipped: refreshed.skipped
     }
   };
 }
-
