@@ -1,15 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { useWorldState } from "@/lib/client/hooks/useWorldState";
+import { setQueryParam } from "@/lib/ui/query-string";
 import { AgentModal } from "./AgentModal";
 import { LeaderboardPanel } from "./LeaderboardPanel";
 import { WorldMap } from "./WorldMap";
 
 export function SpectatorShell() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { data, error, isLoading } = useWorldState();
-  const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
+  const selectedAgent = searchParams.get("agent");
+
+  const onSelectAgent = (username: string) => {
+    const nextSearch = setQueryParam(searchParams.toString(), "agent", username);
+    router.replace(`${pathname}${nextSearch}`, { scroll: false });
+  };
+
+  const onCloseAgent = () => {
+    const nextSearch = setQueryParam(searchParams.toString(), "agent", null);
+    router.replace(`${pathname}${nextSearch}`, { scroll: false });
+  };
 
   return (
     <main className="min-h-screen p-6">
@@ -49,7 +63,7 @@ export function SpectatorShell() {
                   </div>
                 ) : null}
 
-                <WorldMap world={data} focusUsername={selectedAgent} onSelectAgent={(username) => setSelectedAgent(username)} />
+                <WorldMap world={data} focusUsername={selectedAgent} onSelectAgent={onSelectAgent} />
               </div>
             ) : (
               <div className="rounded-md border border-parchment-dark/70 bg-white/70 p-4 text-sm opacity-80">No data.</div>
@@ -58,11 +72,11 @@ export function SpectatorShell() {
         </div>
 
         <div className="rounded-lg border-2 border-parchment-dark bg-parchment-bg p-4 shadow-sm">
-          <LeaderboardPanel selectedPlayer={selectedAgent} onSelectPlayer={(username) => setSelectedAgent(username)} />
+          <LeaderboardPanel selectedPlayer={selectedAgent} onSelectPlayer={onSelectAgent} />
         </div>
       </div>
 
-      {selectedAgent ? <AgentModal username={selectedAgent} onClose={() => setSelectedAgent(null)} /> : null}
+      {selectedAgent ? <AgentModal username={selectedAgent} onClose={onCloseAgent} /> : null}
     </main>
   );
 }

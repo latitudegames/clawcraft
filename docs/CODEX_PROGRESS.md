@@ -217,6 +217,7 @@ Determinism checks:
   - Map zoom controls (+/−/reset) and a manual Center button
   - Leaderboard highlights the selected player; Enter selects the top search result
   - Click agent markers on the map to open the same agent modal
+  - Deep-link selected agent via URL: `/?agent=<username>` (selection persists on refresh)
   - Agent modal shows a small sprite avatar (deterministic by username)
   - Agent modal shows current quest progress (Step X/20) when questing
   - Starter pixel agent sprites rendered on the map (`public/assets/agents/*`, nearest-neighbor)

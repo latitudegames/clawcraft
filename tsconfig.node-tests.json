@@ -55,6 +55,8 @@
     "src/lib/ui/declutter.test.ts",
     "src/lib/ui/roads.ts",
     "src/lib/ui/roads.test.ts",
+    "src/lib/ui/query-string.ts",
+    "src/lib/ui/query-string.test.ts",
     "src/lib/sim/smoke.ts",
     "src/lib/sim/smoke.test.ts",
     "src/types/**/*.ts"
