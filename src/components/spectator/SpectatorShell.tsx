@@ -2,6 +2,7 @@
 
 import { useWorldState } from "@/lib/client/hooks/useWorldState";
 import { WorldMap } from "./WorldMap";
+import { LeaderboardPanel } from "./LeaderboardPanel";
 
 export function SpectatorShell() {
   const { data, error, isLoading } = useWorldState();
@@ -43,8 +44,7 @@ export function SpectatorShell() {
         </div>
 
         <div className="rounded-lg border-2 border-parchment-dark bg-parchment-bg p-4 shadow-sm">
-          <div className="text-sm font-semibold">Leaderboard (coming next)</div>
-          <div className="mt-2 text-xs opacity-70">We’ll populate this from `/api/leaderboard` + `/api/leaderboard/guilds`.</div>
+          <LeaderboardPanel />
         </div>
       </div>
     </main>
