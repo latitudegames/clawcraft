@@ -24,6 +24,7 @@ Execution-level translation of those docs:
 - Domain + API types (`src/types/*`)
 - Deterministic RNG + formulas + mock quest/status generators (`src/lib/**`)
 - Prisma schema for the world (`prisma/schema.prisma`)
+- Prisma migrations committed (`prisma/migrations/*`)
 - Prisma client singleton (`src/lib/db/prisma.ts`)
 - Local dev scaffolding:
   - `.env.example`
@@ -35,21 +36,20 @@ Execution-level translation of those docs:
 - Core API loop (requires DB + migrations at runtime):
   - `POST /api/create-character`
   - `GET /api/quests`
-  - `POST /api/action` (solo quests only; party quests return `501`)
+  - `POST /api/action` (solo + party queueing; supports equipment changes)
   - `GET /api/dashboard`
   - `GET /api/world-state`
   - `GET /api/leaderboard`
   - `GET /api/leaderboard/guilds`
   - `POST /api/webhook`
-
-### Not implemented yet (intentionally stubbed)
-- Prisma migrations are not generated/committed yet (`prisma/migrations/*` is missing)
-- Some API routes under `src/app/api/*` still return `501 NOT_IMPLEMENTED` (not exhaustive):
+- Social endpoints (DB required at runtime):
   - `GET /api/agent/[username]`
   - `POST /api/guild/create`
   - `POST /api/guild/join`
   - `POST /api/guild/leave`
   - `GET /api/guild/[guild_name]`
+
+### Not implemented yet (intentionally stubbed)
 - Frontend spectator map + UI overlays
 - Background schedulers (quest refresh, party timeout) + webhook delivery
 
@@ -57,9 +57,8 @@ Execution-level translation of those docs:
 
 ## Blockers / constraints (current environment)
 
-- **Outbound network appears disabled for this Codex runtime:** DNS lookups fail (`curl: (6) Could not resolve host`) and even raw TCP connects error with `EPERM` (`Operation not permitted`). This blocks `git push`, `gh`, `npm install`, Prisma downloads, etc.
-- **GitHub auth:** `gh auth status` reports the stored token is invalid, and no `GH_TOKEN`/`GITHUB_TOKEN` env vars are set.
-- **Remote repo:** `origin` is configured as `https://github.com/latitudegames/clawcraft.git` (repo created externally). Push when networking works: `git push -u origin main`.
+- **Local Postgres is still blocked here:** Docker daemon is not available and Postgres CLI (`psql`) is not installed, so I can’t run the DB-backed loop (`prisma migrate dev`, `dev:seed`, `dev`, `dev:smoke`) in this environment.
+- Networking is working again (able to `npm install` and `git push`).
 
 ---
 
@@ -93,15 +92,15 @@ Offline smoke (no npm deps / no DB):
 ## Status
 
 ### Now (next concrete milestones)
-- [ ] Publish to GitHub (`latitude/clawcraft`) and push commits
-- [ ] Install deps + generate Prisma migrations (`npx prisma migrate dev`)
-- [ ] Validate full local loop (DB + seed + server + smoke)
-- [ ] Extend `/api/action`:
-  - [ ] party quest queueing + timeouts (per `game-design.md`)
-  - [ ] equipment equip/unequip (inventory + slots)
-- [ ] Implement remaining social endpoints:
-  - [ ] agent profile endpoint (`GET /api/agent/[username]`)
-  - [ ] guild endpoints (`/api/guild/*`, `/api/guild/[guild_name]`)
+- [x] Publish to GitHub (`latitudegames/clawcraft`) and push commits
+- [x] Install deps + generate Prisma migrations (offline diff; commit `prisma/migrations/*`)
+- [ ] Validate full local loop (DB + seed + server + smoke) — blocked on local Postgres
+- [x] Extend `/api/action`:
+  - [x] party quest queueing + timeouts (per `game-design.md`)
+  - [x] equipment equip/unequip (inventory + slots)
+- [x] Implement remaining social endpoints:
+  - [x] agent profile endpoint (`GET /api/agent/[username]`)
+  - [x] guild endpoints (`/api/guild/*`, `/api/guild/[guild_name]`)
 
 ### Next (after core loop works)
 - [ ] Background jobs (quest refresh + party timeout)
@@ -153,4 +152,11 @@ Determinism checks:
 
 ### 2026-02-05
 - Updated Codex docs to be explicitly CLI-first and added a handoff prompt for the next Codex (`docs/CODEX_HANDOFF.md`)
-- Confirmed this Codex runtime cannot reach the internet (DNS + TCP blocked), so publishing/install/migrate must be done after environment restart
+- Networking works again (confirmed `curl`, `npm install`, `git push`)
+- Fixed Prisma schema (`Guild.leaderId` unique), generated and committed initial migrations (`prisma/migrations/*`)
+- Added deterministic modules + tests:
+  - Equipment inventory/slot swap helpers (`src/lib/game/equipment.ts`)
+  - Party quest resolution + queue helpers (`src/lib/game/quest-resolution.ts`, `src/lib/game/party-queue.ts`)
+- Implemented DB-backed API behavior (not runtime-tested here due to Postgres blocker):
+  - `POST /api/action`: equipment changes + party quest queueing/formation
+  - Social endpoints: `GET /api/agent/[username]`, `POST /api/guild/*`, `GET /api/guild/[guild_name]`
