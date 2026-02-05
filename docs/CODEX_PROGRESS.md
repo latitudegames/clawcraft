@@ -83,7 +83,7 @@ Execution-level translation of those docs:
 - Background jobs runner (`src/lib/server/jobs/run-jobs.ts`) currently performs:
   - resolve due quest runs (sends `cycle_complete` webhooks)
   - time out expired party queues (sends `party_timeout` webhooks)
-  - refresh quests every 12h (dev-only, mock LLM)
+  - refresh quests every 12h (deterministic; idempotent per cycle)
 - Production cron wiring:
   - `vercel.json` schedules `GET /api/jobs/run` every 10 minutes
   - Protect the endpoint by setting `CRON_SECRET` or `JOB_SECRET` (expects `Authorization: Bearer <secret>`)
@@ -236,3 +236,4 @@ Determinism checks:
 - Added `offset` pagination support to `/api/leaderboard*` (stable ranks from offset).
 - Chore: upgraded to Next.js `16.1.6` + migrated linting to ESLint 9 flat config (`eslint.config.js`); `npm audit` is now clean.
 - Added optional OpenRouter client + `npm run dev:llm` smoke script (DeepSeek v3.2 default) for narrative/content experiments.
+- Made quest refresh scheduler production-ready with an idempotent per-cycle DB guard (`QuestRefreshCycle`).

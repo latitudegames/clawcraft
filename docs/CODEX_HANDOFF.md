@@ -91,4 +91,4 @@ Offline sanity:
 2. **Spectator polish**
    - Terrain layer + label clutter management (hide/cluster at low zoom).
 3. **Content generation plan**
-   - Replace dev-only quest refresh with a production-ready quest generation strategy (still “no LLM at action-time”).
+   - Optional: replace placeholder quest/status narrative with LLM-backed rewriting (keep gameplay stats deterministic; avoid LLM on the action request path).

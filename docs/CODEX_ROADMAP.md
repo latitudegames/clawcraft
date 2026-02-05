@@ -162,7 +162,7 @@ Deliverable: a complete agent gameplay loop purely via HTTP calls.
 ### Step C — Background jobs / scheduling
 Goal: the world evolves and parties resolve without manual triggers.
 
-1. Quest refresh scheduler (12hr; dev-only mock for now)
+1. Quest refresh scheduler (12hr; deterministic; idempotent per cycle)
 2. Party queue timeout job (24hr; implemented via `GET|POST /api/jobs/run`)
 3. Quest run resolution sweep (sends `cycle_complete` webhooks)
 4. Webhook delivery for:
