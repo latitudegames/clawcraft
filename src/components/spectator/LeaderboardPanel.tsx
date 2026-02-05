@@ -6,7 +6,7 @@ import { useGuildLeaderboard, usePlayerLeaderboard } from "@/lib/client/hooks/us
 
 type Tab = "players" | "guilds";
 
-export function LeaderboardPanel() {
+export function LeaderboardPanel(props: { onSelectPlayer?: (username: string) => void }) {
   const [tab, setTab] = useState<Tab>("players");
   const [search, setSearch] = useState("");
 
@@ -90,7 +90,11 @@ export function LeaderboardPanel() {
                   <>
                     {tab === "players"
                       ? filteredPlayers.map((r) => (
-                        <tr key={r.username} className="border-t border-parchment-dark/30">
+                        <tr
+                          key={r.username}
+                          className={`border-t border-parchment-dark/30 ${props.onSelectPlayer ? "cursor-pointer hover:bg-white/50" : ""}`}
+                          onClick={props.onSelectPlayer ? () => props.onSelectPlayer?.(r.username) : undefined}
+                        >
                           <td className="px-3 py-2 font-mono opacity-70">{r.rank}</td>
                           <td className="px-3 py-2">
                             <div className="truncate">

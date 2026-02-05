@@ -1,11 +1,15 @@
 "use client";
 
+import { useState } from "react";
+
 import { useWorldState } from "@/lib/client/hooks/useWorldState";
-import { WorldMap } from "./WorldMap";
+import { AgentModal } from "./AgentModal";
 import { LeaderboardPanel } from "./LeaderboardPanel";
+import { WorldMap } from "./WorldMap";
 
 export function SpectatorShell() {
   const { data, error, isLoading } = useWorldState();
+  const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
 
   return (
     <main className="min-h-screen p-6">
@@ -44,9 +48,11 @@ export function SpectatorShell() {
         </div>
 
         <div className="rounded-lg border-2 border-parchment-dark bg-parchment-bg p-4 shadow-sm">
-          <LeaderboardPanel />
+          <LeaderboardPanel onSelectPlayer={(username) => setSelectedAgent(username)} />
         </div>
       </div>
+
+      {selectedAgent ? <AgentModal username={selectedAgent} onClose={() => setSelectedAgent(null)} /> : null}
     </main>
   );
 }
