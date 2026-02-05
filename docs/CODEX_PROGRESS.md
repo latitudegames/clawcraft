@@ -73,7 +73,7 @@ Execution-level translation of those docs:
   - refresh quests every 12h (dev-only, mock LLM)
 
 ### Not implemented yet (intentionally stubbed)
-- Frontend spectator polish (POI icons/terrain art, animation, bubble collision/clustering)
+- Frontend spectator polish (terrain art, animation, bubble collision/clustering)
 - Production cron wiring for `/api/jobs/run` (use `JOB_SECRET` once deployed)
 
 ---
@@ -198,5 +198,7 @@ Determinism checks:
   - Leaderboard highlights the selected player; Enter selects the top search result
   - Click agent markers on the map to open the same agent modal
   - Starter pixel agent sprites rendered on the map (`public/assets/agents/*`, nearest-neighbor)
+  - Starter POI icons rendered on the map (`public/assets/poi/*`)
+  - Location connections included in `/api/world-state` and rendered as map lines
 - Expanded API smoke script:
   - `scripts/dev/smoke.mjs` now also calls `GET /api/agent/[username]` and `POST /api/jobs/run`
