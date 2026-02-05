@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useElementSize } from "@/lib/client/hooks/useElementSize";
 import { groupBubbleCandidates, selectBubbleGroups } from "@/lib/ui/bubble-groups";
 import { layoutBubbles } from "@/lib/ui/bubble-layout";
-import { computeFitTransform, type CameraTransform } from "@/lib/ui/camera";
+import { computeCenterTransform, computeFitTransform, type CameraTransform } from "@/lib/ui/camera";
 import { computeClusterOffsets } from "@/lib/ui/cluster-layout";
 import { bubbleLimitForScale, shouldShowAgentLabels, shouldShowLocationLabels } from "@/lib/ui/declutter";
 import { computeRoadPolyline } from "@/lib/ui/roads";
@@ -252,14 +252,13 @@ export function WorldMap({
     const agentY = typeof agent?.y === "number" ? (agent.y as number) + (agentOffset?.dy ?? 0) : null;
     if (typeof agentX !== "number" || typeof agentY !== "number") return;
 
-    const cx = size.width / 2;
-    const cy = size.height / 2;
-
-    setCamera((prev) => ({
-      ...prev,
-      x: cx - agentX * prev.scale,
-      y: cy - agentY * prev.scale
-    }));
+    setCamera((prev) =>
+      computeCenterTransform({
+        viewport: { width: size.width, height: size.height },
+        world: { x: agentX, y: agentY },
+        scale: prev.scale
+      })
+    );
     didInitCamera.current = true;
     focusedFor.current = focusUsername;
   }, [agentOffsets, focusUsername, size.height, size.width, world.agents]);
@@ -649,15 +648,20 @@ export function WorldMap({
             className="rounded-md border border-black/10 bg-white/80 px-3 py-2 text-xs text-ink-brown shadow-sm backdrop-blur hover:bg-white"
             onClick={() => {
               const agent = world.agents.find((a) => a.username === focusUsername);
-              const agentX = agent?.x;
-              const agentY = agent?.y;
+              const agentOffset = agent ? agentOffsets.get(agent.username) : null;
+              const agentX = typeof agent?.x === "number" ? (agent.x as number) + (agentOffset?.dx ?? 0) : null;
+              const agentY = typeof agent?.y === "number" ? (agent.y as number) + (agentOffset?.dy ?? 0) : null;
               if (typeof agentX !== "number" || typeof agentY !== "number") return;
               if (size.width <= 0 || size.height <= 0) return;
 
               didInitCamera.current = true;
-              const cx = size.width / 2;
-              const cy = size.height / 2;
-              setCamera((prev) => ({ ...prev, x: cx - agentX * prev.scale, y: cy - agentY * prev.scale }));
+              setCamera((prev) =>
+                computeCenterTransform({
+                  viewport: { width: size.width, height: size.height },
+                  world: { x: agentX, y: agentY },
+                  scale: prev.scale
+                })
+              );
             }}
           >
             Center

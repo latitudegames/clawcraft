@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { computeFitTransform } from "./camera";
+import { computeCenterTransform, computeFitTransform } from "./camera";
 
 test("computeFitTransform centers bounds with padding", () => {
   const t = computeFitTransform({
@@ -27,3 +27,14 @@ test("computeFitTransform handles single-point bounds", () => {
   assert.equal(t.y, 600 / 2 - 20);
 });
 
+test("computeCenterTransform centers a world point in the viewport", () => {
+  const t = computeCenterTransform({
+    viewport: { width: 800, height: 600 },
+    world: { x: 100, y: 50 },
+    scale: 2
+  });
+
+  assert.equal(t.scale, 2);
+  assert.equal(t.x, 800 / 2 - 100 * 2);
+  assert.equal(t.y, 600 / 2 - 50 * 2);
+});

@@ -16,6 +16,26 @@ export type CameraTransform = {
   y: number;
 };
 
+export function computeCenterTransform(args: { viewport: Viewport; world: { x: number; y: number }; scale: number }): CameraTransform {
+  assertFinite(args.viewport.width, "viewport.width");
+  assertFinite(args.viewport.height, "viewport.height");
+  assertFinite(args.world.x, "world.x");
+  assertFinite(args.world.y, "world.y");
+  assertFinite(args.scale, "scale");
+
+  if (args.viewport.width <= 0) throw new Error("viewport.width must be > 0");
+  if (args.viewport.height <= 0) throw new Error("viewport.height must be > 0");
+
+  const cx = args.viewport.width / 2;
+  const cy = args.viewport.height / 2;
+
+  return {
+    scale: args.scale,
+    x: cx - args.world.x * args.scale,
+    y: cy - args.world.y * args.scale
+  };
+}
+
 function assertFinite(n: number, name: string) {
   if (!Number.isFinite(n)) throw new Error(`${name} must be finite`);
 }
@@ -68,4 +88,3 @@ export function computeFitTransform(args: {
 
   return { scale, x, y };
 }
-

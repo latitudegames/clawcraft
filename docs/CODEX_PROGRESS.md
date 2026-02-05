@@ -228,3 +228,4 @@ Determinism checks:
 - Added bubble grouping helper so party quest runs show one shared bubble (focus-aware).
 - Expanded the API smoke script with an optional guild flow (`SMOKE_GUILD=1` / `--guild`).
 - Rendered connection roads as bent dirt paths (deterministic per edge) and added unit tests for the road polyline helper.
+- Fixed map centering math by introducing a shared `computeCenterTransform` helper (also ensures the manual Center button respects clustered offsets).
