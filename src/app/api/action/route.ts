@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 
 import { DEV_CONFIG } from "@/config/dev-mode";
 import { mockGenerateStatusUpdates } from "@/lib/ai/mock-llm";
 import { prisma } from "@/lib/db/prisma";
 import { parseSkillValues } from "@/lib/game/character";
 import { applyEquipmentChanges, getEquipmentSkillBonuses } from "@/lib/game/equipment";
-import { computeQuestResult } from "@/lib/game/quest-resolution";
+import { computePartyQuestResult, computeQuestResult } from "@/lib/game/quest-resolution";
 import { scaleDurationMs, questStepAt } from "@/lib/game/timing";
 import { resolveQuestRun } from "@/lib/server/resolve-quest-run";
 import { EQUIPMENT_SLOTS, type EquipmentSlot, type ItemDefinition } from "@/types/items";
@@ -16,6 +17,7 @@ export const runtime = "nodejs";
 
 const COOLDOWN_MS = 12 * 60 * 60 * 1000;
 const STATUS_INTERVAL_MS = 30 * 60 * 1000;
+const PARTY_QUEUE_TIMEOUT_MS = 24 * 60 * 60 * 1000;
 const STATUS_STEPS = 20;
 
 function cooldownMs() {
@@ -24,6 +26,10 @@ function cooldownMs() {
 
 function statusIntervalMs() {
   return DEV_CONFIG.DEV_MODE ? scaleDurationMs(STATUS_INTERVAL_MS, DEV_CONFIG.TIME_SCALE) : STATUS_INTERVAL_MS;
+}
+
+function partyQueueTimeoutMs() {
+  return DEV_CONFIG.DEV_MODE ? scaleDurationMs(PARTY_QUEUE_TIMEOUT_MS, DEV_CONFIG.TIME_SCALE) : PARTY_QUEUE_TIMEOUT_MS;
 }
 
 function isEquipmentSlot(value: string): value is EquipmentSlot {
@@ -351,10 +357,274 @@ export async function POST(request: Request) {
     );
   }
   if (quest.partySize > 1) {
-    return NextResponse.json(
-      { ok: false, error: "PARTY_NOT_IMPLEMENTED", message: "Party quests are not implemented yet. Pick a solo quest (party_size: 1)." },
-      { status: 501 }
-    );
+    const timeoutMs = partyQueueTimeoutMs();
+
+    // Load or create the party queue, and opportunistically process timeouts so queued agents get released.
+    const queue = await prisma.$transaction(async (tx) => {
+      let q = await tx.questPartyQueue.findUnique({
+        where: { questId: quest.id },
+        include: { participants: true }
+      });
+
+      if (!q) {
+        q = await tx.questPartyQueue.create({
+          data: { questId: quest.id, status: "waiting", expiresAt: null },
+          include: { participants: true }
+        });
+      }
+
+      const isExpiredWaiting =
+        q.status === "waiting" && q.expiresAt && now >= q.expiresAt && q.participants.length < quest.partySize;
+
+      if (q.status === "timed_out" || isExpiredWaiting) {
+        const refundAgentIds = q.participants.map((p) => p.agentId);
+        if (refundAgentIds.length) {
+          await tx.agent.updateMany({
+            where: { id: { in: refundAgentIds } },
+            data: { nextActionAvailableAt: null }
+          });
+        }
+
+        await tx.questPartyQueueParticipant.deleteMany({ where: { queueId: q.id } });
+        q = await tx.questPartyQueue.update({
+          where: { id: q.id },
+          data: { status: "waiting", expiresAt: null },
+          include: { participants: true }
+        });
+      }
+
+      return q;
+    });
+
+    if (queue.status !== "waiting") {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "PARTY_QUEUE_NOT_WAITING",
+          message: "Party queue is not accepting new participants right now.",
+          status: queue.status
+        },
+        { status: 409 }
+      );
+    }
+
+    const queueExpiresAt = queue.expiresAt ?? new Date(now.getTime() + timeoutMs);
+    const queueId = queue.id;
+    const agentId = agent.id;
+
+    try {
+      await prisma.$transaction(async (tx) => {
+        if (!queue.expiresAt) {
+          await tx.questPartyQueue.update({
+            where: { id: queueId },
+            data: { expiresAt: queueExpiresAt, status: "waiting" }
+          });
+        }
+
+        await tx.questPartyQueueParticipant.create({
+          data: {
+            queueId,
+            agentId,
+            joinedAt: now,
+            skillsChosen: skills,
+            customAction
+          }
+        });
+
+        await tx.agent.update({
+          where: { id: agentId },
+          data: { lastActionAt: now, nextActionAvailableAt: queueExpiresAt }
+        });
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: "ALREADY_QUEUED",
+            message: "You are already queued for this party quest.",
+            help: "Wait for the party to form, or call GET /api/dashboard to check status."
+          },
+          { status: 409 }
+        );
+      }
+      throw err;
+    }
+
+    const updatedQueue = await prisma.questPartyQueue.findUnique({
+      where: { id: queueId },
+      include: { participants: true }
+    });
+    if (!updatedQueue) {
+      return NextResponse.json({ ok: false, error: "QUEUE_STATE_ERROR", message: "Failed to load party queue after join." }, { status: 500 });
+    }
+
+    if (updatedQueue.participants.length < quest.partySize) {
+      return NextResponse.json(
+        {
+          ok: true,
+          queued: true,
+          quest_id: quest.id,
+          party_size: quest.partySize,
+          agents_queued: updatedQueue.participants.length,
+          expires_at: queueExpiresAt.toISOString(),
+          help: "Waiting for party to form. When full, the quest will begin automatically."
+        },
+        { status: 202 }
+      );
+    }
+
+    // Party formed: create a QuestRun for all participants.
+    const participantAgentIds = updatedQueue.participants.map((p) => p.agentId);
+    const partyAgents = await prisma.agent.findMany({
+      where: { id: { in: participantAgentIds } },
+      include: { equipment: { include: { item: true } } }
+    });
+    const agentById = new Map(partyAgents.map((a) => [a.id, a]));
+
+    const partyMembers = updatedQueue.participants.map((p) => {
+      const a = agentById.get(p.agentId);
+      if (!a) throw new Error(`Missing agent for party member: ${p.agentId}`);
+
+      const equipmentState = Object.fromEntries(a.equipment.map((row) => [row.slot, row.itemId])) as Partial<Record<EquipmentSlot, string>>;
+      const equipped: Record<string, ItemDefinition> = {};
+      for (const row of a.equipment) equipped[row.itemId] = itemToDefinition(row.item);
+
+      return {
+        agent: a,
+        queue: p,
+        baseSkills: parseSkillValues(a.skills),
+        equipmentBonuses: getEquipmentSkillBonuses({ equipment: equipmentState, itemsById: equipped })
+      };
+    });
+
+    for (const m of partyMembers) {
+      if (!m.queue.skillsChosen || m.queue.skillsChosen.length !== 3) {
+        return NextResponse.json({ ok: false, error: "INVALID_PARTY_QUEUE", message: "Party queue is missing skill selections." }, { status: 500 });
+      }
+      if (!m.queue.customAction) {
+        return NextResponse.json({ ok: false, error: "INVALID_PARTY_QUEUE", message: "Party queue is missing custom actions." }, { status: 500 });
+      }
+    }
+
+    const partySeed = `run:party:${quest.id}:${queueId}:${now.toISOString()}`;
+    const multipliers = quest.skillMultipliers as SkillMultipliers;
+    const rewards = quest.rewards as QuestRewards;
+
+    const partyResult = computePartyQuestResult({
+      partySize: quest.partySize,
+      baseChallengeRating: quest.challengeRating,
+      rewards,
+      multipliers,
+      seed: partySeed,
+      participants: partyMembers.map((m) => ({
+        skillsChosen: m.queue.skillsChosen as Skill[],
+        baseSkills: m.baseSkills,
+        equipmentBonuses: m.equipmentBonuses,
+        agentGold: m.agent.gold
+      }))
+    });
+
+    const usernames = partyMembers.map((m) => m.agent.username);
+    const questDef: QuestDefinition = {
+      quest_id: quest.id,
+      name: quest.name,
+      description: quest.description,
+      origin: quest.origin.name,
+      destination: quest.destination.name,
+      fail_destination: quest.failDestination?.name ?? null,
+      nearby_pois_for_journey: (quest.nearbyPois as string[] | null) ?? [],
+      challenge_rating: quest.challengeRating,
+      party_size: quest.partySize,
+      skill_multipliers: multipliers,
+      rewards
+    };
+
+    const narrator = partyMembers[0];
+    const statuses = mockGenerateStatusUpdates({
+      quest: questDef,
+      agent: {
+        username: narrator.agent.username,
+        skills_chosen: narrator.queue.skillsChosen as Skill[],
+        custom_action: narrator.queue.customAction
+      },
+      party_members: usernames,
+      outcome: partyResult.outcome,
+      seed: `status:${partySeed}`
+    });
+
+    const locationNames = new Set<string>();
+    for (const s of statuses) {
+      locationNames.add(s.location);
+      if (s.traveling_toward) locationNames.add(s.traveling_toward);
+    }
+
+    const nextActionAt = new Date(now.getTime() + cooldownMs());
+    const run = await prisma.$transaction(async (tx) => {
+      const run = await tx.questRun.create({
+        data: {
+          questId: quest.id,
+          outcome: partyResult.outcome,
+          startedAt: now,
+          effectiveSkill: partyResult.effectiveSkill,
+          randomFactor: partyResult.randomFactor,
+          successLevel: partyResult.successLevel,
+          rewardsGranted: { xpEach: partyResult.participants[0]?.xpGained ?? 0, goldEach: partyResult.participants[0]?.goldGained ?? 0 },
+          participants: {
+            create: partyMembers.map((m, idx) => ({
+              agentId: m.agent.id,
+              skillsChosen: m.queue.skillsChosen as Skill[],
+              customAction: m.queue.customAction,
+              contributedEffectiveSkill: partyResult.participants[idx]?.contributedEffectiveSkill ?? 0,
+              xpGained: partyResult.participants[idx]?.xpGained ?? 0,
+              goldGained: partyResult.participants[idx]?.goldGained ?? 0,
+              goldLost: partyResult.participants[idx]?.goldLost ?? 0
+            }))
+          }
+        }
+      });
+
+      const locations = await tx.location.findMany({ where: { name: { in: Array.from(locationNames) } } });
+      const byName = new Map(locations.map((l) => [l.name, l]));
+
+      await tx.questStatusUpdate.createMany({
+        data: statuses.map((s) => ({
+          runId: run.id,
+          step: s.step,
+          text: s.text,
+          locationId: byName.get(s.location)?.id ?? quest.originId,
+          traveling: s.traveling,
+          travelingTowardId: s.traveling_toward ? byName.get(s.traveling_toward)?.id ?? null : null
+        }))
+      });
+
+      await tx.agent.updateMany({
+        where: { id: { in: participantAgentIds } },
+        data: { lastActionAt: now, nextActionAvailableAt: nextActionAt }
+      });
+
+      await tx.questPartyQueue.update({
+        where: { id: queueId },
+        data: { status: "formed", expiresAt: null }
+      });
+      await tx.questPartyQueueParticipant.deleteMany({ where: { queueId } });
+
+      return run;
+    });
+
+    return NextResponse.json({
+      ok: true,
+      run_id: run.id,
+      outcome: partyResult.outcome,
+      started_at: now.toISOString(),
+      next_action_available_at: nextActionAt.toISOString(),
+      rewards: {
+        xp_gained_each: partyResult.participants[0]?.xpGained ?? 0,
+        gold_gained_each: partyResult.participants[0]?.goldGained ?? 0
+      },
+      party_members: usernames,
+      help: "Call GET /api/dashboard?username=... to watch progress."
+    });
   }
 
   const agentSkills = parseSkillValues(agent.skills);
