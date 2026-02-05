@@ -56,6 +56,7 @@ Execution-level translation of those docs:
   - Map zoom controls (+/−/reset) + center-on-selected-agent button
   - Leaderboard panel (players/guilds tabs) wired to `/api/leaderboard*`
   - Click player row → focus map on agent + open agent modal (`GET /api/agent/[username]`)
+  - Click agent marker on map → open agent modal
 
 ### Webhooks + background scheduling
 - Webhook registration: `POST /api/webhook`
@@ -192,5 +193,6 @@ Determinism checks:
   - Click leaderboard player → focus map on agent + open agent modal (skills, equipment, inventory, journey log, last quest)
   - Map zoom controls (+/−/reset) and a manual Center button
   - Leaderboard highlights the selected player; Enter selects the top search result
+  - Click agent markers on the map to open the same agent modal
 - Expanded API smoke script:
   - `scripts/dev/smoke.mjs` now also calls `GET /api/agent/[username]` and `POST /api/jobs/run`
