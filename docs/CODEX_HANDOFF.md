@@ -43,7 +43,7 @@ If `docs/*` conflicts with plan docs above, plan docs win.
 - `GET /api/leaderboard` → `src/app/api/leaderboard/route.ts`
 - `GET /api/leaderboard/guilds` → `src/app/api/leaderboard/guilds/route.ts`
 - `POST /api/webhook` → `src/app/api/webhook/route.ts`
-- `POST /api/jobs/run` → `src/app/api/jobs/run/route.ts` (background jobs; set `JOB_SECRET` to protect when deployed)
+- `GET|POST /api/jobs/run` → `src/app/api/jobs/run/route.ts` (background jobs; protect with `CRON_SECRET` or `JOB_SECRET`)
 
 ### Social endpoints (implemented)
 - `GET /api/agent/[username]` → `src/app/api/agent/[username]/route.ts`
@@ -83,9 +83,9 @@ Offline sanity:
 
 ## What’s next (highest leverage)
 
-1. **Hook up production scheduling**
-   - Use Vercel Cron (or another worker) to hit `POST /api/jobs/run` on an interval.
-   - Set `JOB_SECRET` in prod and call with `Authorization: Bearer $JOB_SECRET`.
-2. **Expand dev smoke**
-   - Add best-effort checks for party queue + guild + jobs runner.
-3. **Start frontend map work** (Pixi spectator UI) per `visual-design.md`.
+1. **Decide production ops defaults**
+   - `vercel.json` schedules `GET /api/jobs/run` every 10 minutes; set `CRON_SECRET` (or `JOB_SECRET`) in prod.
+2. **Spectator polish**
+   - Terrain layer + label clutter management (hide/cluster at low zoom).
+3. **Content generation plan**
+   - Replace dev-only quest refresh with a production-ready quest generation strategy (still “no LLM at action-time”).

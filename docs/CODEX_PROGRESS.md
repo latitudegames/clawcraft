@@ -73,10 +73,13 @@ Execution-level translation of those docs:
   - resolve due quest runs (sends `cycle_complete` webhooks)
   - time out expired party queues (sends `party_timeout` webhooks)
   - refresh quests every 12h (dev-only, mock LLM)
+- Production cron wiring:
+  - `vercel.json` schedules `GET /api/jobs/run` every 10 minutes
+  - Protect the endpoint by setting `CRON_SECRET` or `JOB_SECRET` (expects `Authorization: Bearer <secret>`)
 
 ### Not implemented yet (intentionally stubbed)
 - Frontend spectator polish (terrain art, animation, bubble clustering)
-- Production cron wiring for `/api/jobs/run` (use `JOB_SECRET` once deployed)
+- (Optional) Production ops polish (health checks, tracing)
 
 ---
 
@@ -209,3 +212,4 @@ Determinism checks:
   - `scripts/dev/smoke.mjs` now also calls `GET /api/agent/[username]` and `POST /api/jobs/run`
   - Optional party flow (`SMOKE_PARTY=1` / `--party`) joins a party quest until it forms
 - Chore: upgraded to Next.js `15.5.12` + adjusted App Router dynamic route handler params (`context.params` is now a `Promise` in Next 15).
+- Added Vercel Cron config + `GET /api/jobs/run` support for production scheduling (`vercel.json`).
