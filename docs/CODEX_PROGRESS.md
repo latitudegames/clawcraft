@@ -97,7 +97,7 @@ Execution-level translation of those docs:
 
 - Networking is working (able to `npm install` and `git push`).
 - Local Postgres works via Docker (`docker compose up -d`). If `docker compose` is missing (common when `docker` is installed via Homebrew), install the plugin (`brew install docker-compose`) and add `cliPluginsExtraDirs` to `~/.docker/config.json` as per the Homebrew caveats.
-- `npm audit` is down to **1 moderate** Next.js advisory; fully clearing requires a larger upgrade (Next 16 + ESLint 9) than is currently worth it.
+- `npm audit` is clean (0 vulnerabilities) after upgrading to Next 16 + ESLint 9.
 
 ---
 
@@ -233,3 +233,4 @@ Determinism checks:
 - Added a spectator empty-state hint that points to `npm run dev:demo` for quickly populating the map.
 - Added `README.md` quickstart + a subtle grass texture behind the Pixi map canvas.
 - Added `offset` pagination support to `/api/leaderboard*` (stable ranks from offset).
+- Chore: upgraded to Next.js `16.1.6` + migrated linting to ESLint 9 flat config (`eslint.config.js`); `npm audit` is now clean.
