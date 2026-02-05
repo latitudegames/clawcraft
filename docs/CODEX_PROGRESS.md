@@ -34,6 +34,7 @@ Execution-level translation of those docs:
   - `npm test` (compiles Node test subset + runs `node --test`)
   - `npm run dev:seed` (idempotent seed: locations, connections, items)
   - `npm run dev:smoke` (API smoke runner; requires local server + DB)
+    - Optional: `SMOKE_PARTY=1` (or `--party`) exercises party queueing/formation
 - Core API loop (requires DB + migrations at runtime):
   - `POST /api/create-character`
   - `GET /api/quests`
@@ -206,4 +207,5 @@ Determinism checks:
   - Location connections included in `/api/world-state` and rendered as map lines
 - Expanded API smoke script:
   - `scripts/dev/smoke.mjs` now also calls `GET /api/agent/[username]` and `POST /api/jobs/run`
+  - Optional party flow (`SMOKE_PARTY=1` / `--party`) joins a party quest until it forms
 - Chore: upgraded to Next.js `15.5.12` + adjusted App Router dynamic route handler params (`context.params` is now a `Promise` in Next 15).
