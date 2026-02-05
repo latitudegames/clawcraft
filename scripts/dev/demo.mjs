@@ -1,5 +1,3 @@
-/* eslint-disable no-console */
-
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
 const LOCATION = process.env.LOCATION ?? "King's Landing";
 const DEMO_AGENTS = Number.parseInt(process.env.DEMO_AGENTS ?? "12", 10);

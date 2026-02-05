@@ -1,5 +1,3 @@
-/* eslint-disable no-console */
-
 import type { QuestStatusUpdate } from "../../types/quests";
 import type { SkillValues } from "../../types/skills";
 import { mockGenerateQuest, mockGenerateStatusUpdates } from "../ai/mock-llm";

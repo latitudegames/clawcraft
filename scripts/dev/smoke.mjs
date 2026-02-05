@@ -1,5 +1,3 @@
-/* eslint-disable no-console */
-
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
 const LOCATION = process.env.LOCATION ?? "King's Landing";
 const USERNAME = process.env.USERNAME ?? "codex_smoke";

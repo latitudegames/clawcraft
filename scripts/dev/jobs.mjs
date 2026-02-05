@@ -1,5 +1,3 @@
-/* eslint-disable no-console */
-
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
 const JOB_SECRET = process.env.JOB_SECRET ?? "";
 
@@ -45,4 +43,3 @@ main().catch((err) => {
   console.error(err);
   process.exitCode = 1;
 });
-
