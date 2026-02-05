@@ -53,6 +53,7 @@ Execution-level translation of those docs:
 - Frontend spectator scaffold:
   - `/` renders PixiJS world map + polling (`/api/world-state`)
   - Speech bubble overlay anchored to agent markers (HTML overlay)
+  - Map zoom controls (+/−/reset) + center-on-selected-agent button
   - Leaderboard panel (players/guilds tabs) wired to `/api/leaderboard*`
   - Click player row → focus map on agent + open agent modal (`GET /api/agent/[username]`)
 
@@ -189,5 +190,7 @@ Determinism checks:
 - Added spectator UI polish:
   - Speech bubble overlay (HTML) anchored to agent positions
   - Click leaderboard player → focus map on agent + open agent modal (skills, equipment, inventory, journey log, last quest)
+  - Map zoom controls (+/−/reset) and a manual Center button
+  - Leaderboard highlights the selected player; Enter selects the top search result
 - Expanded API smoke script:
   - `scripts/dev/smoke.mjs` now also calls `GET /api/agent/[username]` and `POST /api/jobs/run`
