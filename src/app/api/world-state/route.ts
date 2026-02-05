@@ -39,10 +39,12 @@ async function computeWorldState(): Promise<WorldStateResponse> {
   for (const c of rawConnections) {
     const a = c.fromId;
     const b = c.toId;
-    const key = a < b ? `${a}:${b}` : `${b}:${a}`;
+    const fromId = a < b ? a : b;
+    const toId = a < b ? b : a;
+    const key = `${fromId}:${toId}`;
     if (seenEdges.has(key)) continue;
     seenEdges.add(key);
-    connections.push({ from_id: a, to_id: b, distance: c.distance });
+    connections.push({ from_id: fromId, to_id: toId, distance: c.distance });
   }
 
   const agents = await prisma.agent.findMany({

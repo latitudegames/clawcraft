@@ -66,6 +66,7 @@ Execution-level translation of those docs:
   - Agent sprites rendered on-map (starter set in `public/assets/agents/*`)
   - POI icons rendered on-map (starter set in `public/assets/poi/*`)
   - Location connection lines rendered (via `connections` in `/api/world-state`)
+  - Connection roads: connections render as bent dirt paths (deterministic per edge)
   - Map zoom controls (+/−/reset) + center-on-selected-agent button
   - Leaderboard panel (players/guilds tabs) wired to `/api/leaderboard*`
   - Click player row → focus map on agent + open agent modal (`GET /api/agent/[username]`)
@@ -226,3 +227,4 @@ Determinism checks:
 - Added a small async TTL cache helper + wired it into `/api/world-state` to dedupe frequent polls.
 - Added bubble grouping helper so party quest runs show one shared bubble (focus-aware).
 - Expanded the API smoke script with an optional guild flow (`SMOKE_GUILD=1` / `--guild`).
+- Rendered connection roads as bent dirt paths (deterministic per edge) and added unit tests for the road polyline helper.

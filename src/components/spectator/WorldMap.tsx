@@ -10,6 +10,7 @@ import { layoutBubbles } from "@/lib/ui/bubble-layout";
 import { computeFitTransform, type CameraTransform } from "@/lib/ui/camera";
 import { computeClusterOffsets } from "@/lib/ui/cluster-layout";
 import { bubbleLimitForScale, shouldShowAgentLabels, shouldShowLocationLabels } from "@/lib/ui/declutter";
+import { computeRoadPolyline } from "@/lib/ui/roads";
 import type { AgentSpriteKey } from "@/lib/ui/sprites";
 import { AGENT_SPRITE_KEYS, agentSpriteKeyForUsername } from "@/lib/ui/sprites";
 import type { WorldStateResponse } from "@/types/world-state";
@@ -279,9 +280,30 @@ export function WorldMap({
       if (!from || !to) continue;
       if (typeof from.x !== "number" || typeof from.y !== "number" || typeof to.x !== "number" || typeof to.y !== "number") continue;
 
-      scene.mapGraphics.moveTo(from.x, from.y);
-      scene.mapGraphics.lineTo(to.x, to.y);
-      scene.mapGraphics.stroke({ width: 3, color: 0x4a3728, alpha: 0.12 });
+      const points = computeRoadPolyline({
+        from: { x: from.x, y: from.y },
+        to: { x: to.x, y: to.y },
+        seed: `${from.id}:${to.id}`
+      });
+
+      const drawPath = () => {
+        const start = points[0];
+        if (!start) return;
+        scene.mapGraphics.moveTo(start.x, start.y);
+        for (let i = 1; i < points.length; i++) {
+          const p = points[i];
+          if (!p) continue;
+          scene.mapGraphics.lineTo(p.x, p.y);
+        }
+      };
+
+      // Dirt road with subtle border + highlight (Stardew-ish).
+      drawPath();
+      scene.mapGraphics.stroke({ width: 10, color: 0x4a3728, alpha: 0.18 });
+      drawPath();
+      scene.mapGraphics.stroke({ width: 8, color: 0xc9a567, alpha: 0.55 });
+      drawPath();
+      scene.mapGraphics.stroke({ width: 3, color: 0xe8d170, alpha: 0.35 });
     }
 
     for (const l of world.locations) {
