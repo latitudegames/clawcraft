@@ -4,6 +4,9 @@ const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
 const LOCATION = process.env.LOCATION ?? "King's Landing";
 const USERNAME = process.env.USERNAME ?? "codex_smoke";
 const INCLUDE_PARTY = process.env.SMOKE_PARTY === "1" || process.argv.includes("--party");
+const INCLUDE_GUILD = process.env.SMOKE_GUILD === "1" || process.argv.includes("--guild");
+
+const GUILD_CREATE_COST_GOLD = 500;
 
 function usage() {
   console.log("Clawcraft API smoke runner");
@@ -17,6 +20,7 @@ function usage() {
   console.log("  LOCATION=\"King's Landing\"");
   console.log("  USERNAME=codex_smoke");
   console.log("  SMOKE_PARTY=1 (or pass --party)");
+  console.log("  SMOKE_GUILD=1 (or pass --guild)");
 }
 
 async function readJson(res) {
@@ -40,12 +44,43 @@ async function request(method, path, body) {
   return { res, json, url };
 }
 
+async function bestEffortEnsureGold(username, requiredGold) {
+  try {
+    const { PrismaClient } = await import("@prisma/client");
+    const prisma = new PrismaClient();
+
+    try {
+      const agent = await prisma.agent.findUnique({ where: { username }, select: { id: true, gold: true } });
+      if (!agent) return { ok: false, error: "AGENT_NOT_FOUND" };
+      if (agent.gold >= requiredGold) return { ok: true, previous: agent.gold, current: agent.gold };
+
+      await prisma.agent.update({ where: { id: agent.id }, data: { gold: requiredGold } });
+      return { ok: true, previous: agent.gold, current: requiredGold };
+    } finally {
+      await prisma.$disconnect().catch(() => undefined);
+    }
+  } catch (err) {
+    return { ok: false, error: "PRISMA_ERROR", message: err instanceof Error ? err.message : String(err) };
+  }
+}
+
 async function bestEffortJobsRun() {
   const jobs = await request("POST", "/api/jobs/run");
   console.log("POST /api/jobs/run", jobs.res.status, jobs.url);
   console.log(jobs.json);
   console.log("");
   return jobs;
+}
+
+function makeGuildName() {
+  const suffix = Date.now().toString(36);
+  return `Smoke Guild ${suffix}`;
+}
+
+function makeGuildTag() {
+  const suffix = Date.now().toString(36).toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const tag = `SM${suffix}`.slice(0, 4);
+  return tag.length >= 3 ? tag : "SMK";
 }
 
 async function main() {
@@ -68,6 +103,61 @@ async function main() {
   console.log("POST /api/create-character", createCharacter.res.status, createCharacter.url);
   console.log(createCharacter.json);
   console.log("");
+
+  let guildName = null;
+  if (INCLUDE_GUILD) {
+    const leaderLeave = await request("POST", "/api/guild/leave", { username: USERNAME });
+    console.log("POST /api/guild/leave (leader pre)", leaderLeave.res.status, leaderLeave.url);
+    console.log(leaderLeave.json);
+    console.log("");
+
+    const gold = await bestEffortEnsureGold(USERNAME, GUILD_CREATE_COST_GOLD);
+    console.log("DB ensure gold (leader)", gold);
+    console.log("");
+
+    guildName = makeGuildName();
+    const tag = makeGuildTag();
+
+    const createdGuild = await request("POST", "/api/guild/create", { username: USERNAME, guild_name: guildName, tag });
+    console.log("POST /api/guild/create", createdGuild.res.status, createdGuild.url);
+    console.log(createdGuild.json);
+    console.log("");
+
+    const memberName = `${USERNAME}_member`;
+    const memberCreated = await request("POST", "/api/create-character", {
+      username: memberName,
+      profile_picture_id: 0,
+      location: LOCATION,
+      skills: {
+        stealth: 10,
+        lockpicking: 6,
+        illusion: 4
+      }
+    });
+    console.log("POST /api/create-character (member)", memberCreated.res.status, memberCreated.url, memberName);
+    console.log(memberCreated.json);
+    console.log("");
+
+    const memberLeave = await request("POST", "/api/guild/leave", { username: memberName });
+    console.log("POST /api/guild/leave (member pre)", memberLeave.res.status, memberLeave.url);
+    console.log(memberLeave.json);
+    console.log("");
+
+    const joinedGuild = await request("POST", "/api/guild/join", { username: memberName, guild_name: guildName });
+    console.log("POST /api/guild/join", joinedGuild.res.status, joinedGuild.url);
+    console.log(joinedGuild.json);
+    console.log("");
+
+    const guildInfo = await request("GET", `/api/guild/${encodeURIComponent(guildName)}`);
+    console.log("GET /api/guild/[guild_name]", guildInfo.res.status, guildInfo.url);
+    console.log(guildInfo.json);
+    console.log("");
+
+    const guildLeaderboard = await request("GET", "/api/leaderboard/guilds?limit=10");
+    console.log("GET /api/leaderboard/guilds", guildLeaderboard.res.status, guildLeaderboard.url);
+    console.log(guildLeaderboard.json);
+    console.log("");
+  }
 
   const quests = await request("GET", `/api/quests?location=${encodeURIComponent(LOCATION)}`);
   console.log("GET /api/quests", quests.res.status, quests.url);
@@ -159,6 +249,19 @@ async function main() {
   console.log("");
   console.log("GET /api/world-state", worldState.res.status, worldState.url);
   console.log(worldState.json);
+
+  if (INCLUDE_GUILD && guildName) {
+    const memberName = `${USERNAME}_member`;
+    const memberLeave = await request("POST", "/api/guild/leave", { username: memberName });
+    console.log("");
+    console.log("POST /api/guild/leave (member)", memberLeave.res.status, memberLeave.url);
+    console.log(memberLeave.json);
+
+    const leaderLeave = await request("POST", "/api/guild/leave", { username: USERNAME });
+    console.log("");
+    console.log("POST /api/guild/leave (leader)", leaderLeave.res.status, leaderLeave.url);
+    console.log(leaderLeave.json);
+  }
 
   await bestEffortJobsRun();
 }

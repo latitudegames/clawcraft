@@ -142,7 +142,7 @@ Offline smoke (no npm deps / no DB):
 ### Next (after core loop works)
 - [x] Add speech bubble overlay + reveal cadence (time-scaled in dev)
 - [x] Add agent card modal + search/focus
-- [ ] (Optional) Expand `scripts/dev/smoke.mjs` to cover party + guild (agent + jobs runner added)
+- [x] (Optional) Expand `scripts/dev/smoke.mjs` to cover party + guild (agent + jobs runner added)
 
 ### Done
 - [x] Created `docs/CODEX_ROADMAP.md`
@@ -225,3 +225,4 @@ Determinism checks:
 - Added CI workflow (`.github/workflows/ci.yml`) to keep main green.
 - Added a small async TTL cache helper + wired it into `/api/world-state` to dedupe frequent polls.
 - Added bubble grouping helper so party quest runs show one shared bubble (focus-aware).
+- Expanded the API smoke script with an optional guild flow (`SMOKE_GUILD=1` / `--guild`).
