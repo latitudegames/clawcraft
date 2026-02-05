@@ -197,6 +197,7 @@ Determinism checks:
   - Map zoom controls (+/−/reset) and a manual Center button
   - Leaderboard highlights the selected player; Enter selects the top search result
   - Click agent markers on the map to open the same agent modal
+  - Agent modal shows a small sprite avatar (deterministic by username)
   - Starter pixel agent sprites rendered on the map (`public/assets/agents/*`, nearest-neighbor)
   - Starter POI icons rendered on the map (`public/assets/poi/*`)
   - Location connections included in `/api/world-state` and rendered as map lines
