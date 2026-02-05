@@ -1,3 +1,5 @@
+/* eslint-disable @next/next/no-assign-module-variable */
+
 declare module "node:test" {
   type TestFn = () => void | Promise<void>;
   const test: (name: string, fn: TestFn) => void;

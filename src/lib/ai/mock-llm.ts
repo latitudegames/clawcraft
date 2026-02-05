@@ -44,7 +44,6 @@ function buildSkillMultipliers(seed: string): SkillMultipliers {
 
   const highCount = rng.int(2, 3);
   const neutralCount = rng.int(5, 7);
-  const lowCount = SKILLS.length - highCount - neutralCount;
 
   const highs = shuffled.slice(0, highCount);
   const neutrals = shuffled.slice(highCount, highCount + neutralCount);
