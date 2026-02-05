@@ -17,6 +17,8 @@ const MIN_SCALE = 0.35;
 const MAX_SCALE = 8;
 const AGENT_SPRITE_SCALE = 0.3;
 const AGENT_SPRITE_SIZE_WORLD = 64 * AGENT_SPRITE_SCALE;
+const POI_ICON_SCALE = 0.25;
+const POI_ICON_SIZE_WORLD = 128 * POI_ICON_SCALE;
 
 function colorForLocationType(type: string): number {
   switch (type) {
@@ -43,14 +45,27 @@ function spriteKeyForUsername(username: string): AgentSpriteKey {
   return AGENT_SPRITE_KEYS[idx];
 }
 
+const POI_ICON_KEYS = ["kings-landing", "whispering-woods", "goblin-cave", "ancient-library", "dragon-peak"] as const;
+type PoiIconKey = (typeof POI_ICON_KEYS)[number];
+
+function slugifyPoiName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/['’]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
+}
+
 type PixiScene = {
   app: Application;
   world: Container;
   mapGraphics: Graphics;
+  poiSprites: Container;
   locationLabels: Container;
   agentSprites: Container;
   agentLabels: Container;
   agentTextures: Map<AgentSpriteKey, Texture>;
+  poiTextures: Map<PoiIconKey, Texture>;
   spritesByUsername: Map<string, Sprite>;
 };
 
@@ -111,11 +126,13 @@ export function WorldMap({
 
       const worldContainer = new Container();
       const mapGraphics = new Graphics();
+      const poiSprites = new Container();
       const locationLabels = new Container();
       const agentSprites = new Container();
       const agentLabels = new Container();
 
       worldContainer.addChild(mapGraphics);
+      worldContainer.addChild(poiSprites);
       worldContainer.addChild(locationLabels);
       worldContainer.addChild(agentSprites);
       worldContainer.addChild(agentLabels);
@@ -123,23 +140,27 @@ export function WorldMap({
       app.stage.addChild(worldContainer);
 
       const agentTextures = new Map<AgentSpriteKey, Texture>();
+      const poiTextures = new Map<PoiIconKey, Texture>();
       const spritesByUsername = new Map<string, Sprite>();
 
       agentSprites.sortableChildren = true;
+      poiSprites.sortableChildren = true;
 
       pixi.current = {
         app,
         world: worldContainer,
         mapGraphics,
+        poiSprites,
         locationLabels,
         agentSprites,
         agentLabels,
         agentTextures,
+        poiTextures,
         spritesByUsername
       };
 
-      void Promise.all(
-        AGENT_SPRITE_KEYS.map(async (key) => {
+      void Promise.all([
+        ...AGENT_SPRITE_KEYS.map(async (key) => {
           try {
             const texture = (await Assets.load(`/assets/agents/${key}.png`)) as Texture;
             if (cancelled) return;
@@ -147,8 +168,17 @@ export function WorldMap({
           } catch {
             // Best-effort; fall back to marker circles if assets fail to load.
           }
+        }),
+        ...POI_ICON_KEYS.map(async (key) => {
+          try {
+            const texture = (await Assets.load(`/assets/poi/${key}.png`)) as Texture;
+            if (cancelled) return;
+            poiTextures.set(key, texture);
+          } catch {
+            // Best-effort; keep using procedural markers when missing.
+          }
         })
-      ).then(() => {
+      ]).then(() => {
         if (cancelled) return;
         setAssetsVersion((v) => v + 1);
       });
@@ -224,20 +254,35 @@ export function WorldMap({
     if (!scene) return;
 
     scene.mapGraphics.clear();
+    scene.poiSprites.removeChildren().forEach((c) => c.destroy());
     scene.locationLabels.removeChildren().forEach((c) => c.destroy());
     scene.agentLabels.removeChildren().forEach((c) => c.destroy());
 
     for (const l of world.locations) {
       if (typeof l.x !== "number" || typeof l.y !== "number") continue;
 
-      scene.mapGraphics.circle(l.x, l.y, 7).fill({ color: colorForLocationType(l.type), alpha: 0.95 });
-      scene.mapGraphics.circle(l.x, l.y, 7).stroke({ width: 2, color: 0x4a3728, alpha: 0.35 });
+      scene.mapGraphics.circle(l.x, l.y + 10, 12).fill({ color: 0x000000, alpha: 0.1 });
+
+      const poiKey = slugifyPoiName(l.name) as PoiIconKey;
+      const texture = scene.poiTextures.get(poiKey);
+
+      if (texture) {
+        const icon = new Sprite(texture);
+        icon.anchor.set(0.5, 0.5);
+        icon.scale.set(POI_ICON_SCALE);
+        icon.position.set(l.x, l.y);
+        icon.zIndex = l.y;
+        scene.poiSprites.addChild(icon);
+      } else {
+        scene.mapGraphics.circle(l.x, l.y, 7).fill({ color: colorForLocationType(l.type), alpha: 0.95 });
+        scene.mapGraphics.circle(l.x, l.y, 7).stroke({ width: 2, color: 0x4a3728, alpha: 0.35 });
+      }
 
       const label = new Text({
         text: l.name,
         style: { fill: 0x4a3728, fontSize: 12, fontWeight: "600" }
       });
-      label.position.set(l.x + 10, l.y - 10);
+      label.position.set(l.x + (texture ? POI_ICON_SIZE_WORLD / 2 + 8 : 10), l.y - (texture ? POI_ICON_SIZE_WORLD / 2 + 2 : 10));
       scene.locationLabels.addChild(label);
     }
 
