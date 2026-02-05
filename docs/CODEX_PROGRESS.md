@@ -229,3 +229,4 @@ Determinism checks:
 - Expanded the API smoke script with an optional guild flow (`SMOKE_GUILD=1` / `--guild`).
 - Rendered connection roads as bent dirt paths (deterministic per edge) and added unit tests for the road polyline helper.
 - Fixed map centering math by introducing a shared `computeCenterTransform` helper (also ensures the manual Center button respects clustered offsets).
+- Added a spectator empty-state hint that points to `npm run dev:demo` for quickly populating the map.
