@@ -6,7 +6,7 @@ import { useGuildLeaderboard, usePlayerLeaderboard } from "@/lib/client/hooks/us
 
 type Tab = "players" | "guilds";
 
-export function LeaderboardPanel(props: { onSelectPlayer?: (username: string) => void }) {
+export function LeaderboardPanel(props: { onSelectPlayer?: (username: string) => void; selectedPlayer?: string | null }) {
   const [tab, setTab] = useState<Tab>("players");
   const [search, setSearch] = useState("");
 
@@ -59,6 +59,14 @@ export function LeaderboardPanel(props: { onSelectPlayer?: (username: string) =>
           placeholder={tab === "players" ? "Search players…" : "Search guilds…"}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter") return;
+            if (tab !== "players") return;
+            if (!props.onSelectPlayer) return;
+            const first = filteredPlayers[0];
+            if (!first) return;
+            props.onSelectPlayer(first.username);
+          }}
         />
       </div>
 
@@ -89,22 +97,27 @@ export function LeaderboardPanel(props: { onSelectPlayer?: (username: string) =>
                 ) : (
                   <>
                     {tab === "players"
-                      ? filteredPlayers.map((r) => (
-                        <tr
-                          key={r.username}
-                          className={`border-t border-parchment-dark/30 ${props.onSelectPlayer ? "cursor-pointer hover:bg-white/50" : ""}`}
-                          onClick={props.onSelectPlayer ? () => props.onSelectPlayer?.(r.username) : undefined}
-                        >
-                          <td className="px-3 py-2 font-mono opacity-70">{r.rank}</td>
-                          <td className="px-3 py-2">
-                            <div className="truncate">
-                              {r.username}
-                              {r.guild_tag ? <span className="ml-2 opacity-60">[{r.guild_tag}]</span> : null}
-                            </div>
-                          </td>
-                          <td className="px-3 py-2 text-right font-mono">{r.level}</td>
-                        </tr>
-                      ))
+                      ? filteredPlayers.map((r) => {
+                          const isSelected = Boolean(props.selectedPlayer && props.selectedPlayer === r.username);
+                          return (
+                            <tr
+                              key={r.username}
+                              className={`border-t border-parchment-dark/30 ${
+                                isSelected ? "bg-accent-gold/20" : ""
+                              } ${props.onSelectPlayer ? "cursor-pointer hover:bg-white/50" : ""}`}
+                              onClick={props.onSelectPlayer ? () => props.onSelectPlayer?.(r.username) : undefined}
+                            >
+                              <td className="px-3 py-2 font-mono opacity-70">{r.rank}</td>
+                              <td className="px-3 py-2">
+                                <div className="truncate">
+                                  {r.username}
+                                  {r.guild_tag ? <span className="ml-2 opacity-60">[{r.guild_tag}]</span> : null}
+                                </div>
+                              </td>
+                              <td className="px-3 py-2 text-right font-mono">{r.level}</td>
+                            </tr>
+                          );
+                        })
                       : filteredGuilds.map((g) => (
                       <tr key={g.tag} className="border-t border-parchment-dark/30">
                         <td className="px-3 py-2 font-mono opacity-70">{g.rank}</td>

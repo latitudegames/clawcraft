@@ -48,7 +48,7 @@ export function SpectatorShell() {
         </div>
 
         <div className="rounded-lg border-2 border-parchment-dark bg-parchment-bg p-4 shadow-sm">
-          <LeaderboardPanel onSelectPlayer={(username) => setSelectedAgent(username)} />
+          <LeaderboardPanel selectedPlayer={selectedAgent} onSelectPlayer={(username) => setSelectedAgent(username)} />
         </div>
       </div>
 
