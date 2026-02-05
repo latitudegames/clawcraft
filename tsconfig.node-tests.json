@@ -33,6 +33,8 @@
     "src/lib/game/item-drops.test.ts",
     "src/lib/game/webhooks.ts",
     "src/lib/game/webhooks.test.ts",
+    "src/lib/ui/camera.ts",
+    "src/lib/ui/camera.test.ts",
     "src/lib/sim/smoke.ts",
     "src/lib/sim/smoke.test.ts",
     "src/types/**/*.ts"
