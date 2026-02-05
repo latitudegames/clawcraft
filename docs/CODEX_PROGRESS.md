@@ -58,6 +58,7 @@ Execution-level translation of those docs:
 - Frontend spectator scaffold:
   - `/` renders PixiJS world map + polling (`/api/world-state`)
   - `/api/world-state` has a small server-side TTL cache (1s) with in-flight dedupe to reduce DB load under polling
+  - Map terrain: subtle grass texture background (CSS)
   - Speech bubble overlay anchored to agent markers (HTML overlay)
   - Bubble overlap mitigation (deterministic stacking + viewport clamping)
   - Party bubble dedupe: party quest runs render **one bubble per run** (label includes `+N`; focus pins the bubble to the focused party member)
@@ -230,3 +231,4 @@ Determinism checks:
 - Rendered connection roads as bent dirt paths (deterministic per edge) and added unit tests for the road polyline helper.
 - Fixed map centering math by introducing a shared `computeCenterTransform` helper (also ensures the manual Center button respects clustered offsets).
 - Added a spectator empty-state hint that points to `npm run dev:demo` for quickly populating the map.
+- Added `README.md` quickstart + a subtle grass texture behind the Pixi map canvas.
