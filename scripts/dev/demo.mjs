@@ -2,6 +2,7 @@ const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
 const LOCATION = process.env.LOCATION ?? "King's Landing";
 const DEMO_AGENTS = Number.parseInt(process.env.DEMO_AGENTS ?? "12", 10);
 const DEMO_CAP = Number.parseInt(process.env.DEMO_CAP ?? "40", 10);
+const DEMO_LOCATIONS = Number.parseInt(process.env.DEMO_LOCATIONS ?? "", 10);
 const INCLUDE_PARTY = process.env.DEMO_PARTY === "1" || process.argv.includes("--party");
 const RUN_ID = process.env.DEMO_RUN_ID ?? Date.now().toString(36);
 
@@ -17,6 +18,7 @@ function usage() {
   console.log("  LOCATION=\"King's Landing\"  (starting location fallback)");
   console.log("  DEMO_AGENTS=12");
   console.log("  DEMO_CAP=40  (hard cap; override carefully for load tests)");
+  console.log("  DEMO_LOCATIONS=24  (how many POIs to spread demo agents across; defaults to 24 for large worlds)");
   console.log("  DEMO_PARTY=1  (or pass --party)");
   console.log("  DEMO_RUN_ID=abc123  (defaults to timestamp)");
 }
@@ -44,6 +46,35 @@ async function request(method, path, body) {
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function fnv1a32(str) {
+  // Simple stable string -> uint32 hash (FNV-1a)
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffle(arr, rnd) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
 }
 
 async function bestEffortJobsRun() {
@@ -134,7 +165,15 @@ async function main() {
   await bestEffortJobsRun();
 
   const locationNames = (await getWorldLocations()) ?? [LOCATION];
-  const uniqueLocations = Array.from(new Set(locationNames)).slice(0, 8);
+  const allUnique = Array.from(new Set(locationNames));
+
+  const defaultLocationCount = allUnique.length > 20 ? 24 : 8;
+  const desiredLocationCount = Number.isFinite(DEMO_LOCATIONS) ? Math.max(1, Math.min(200, DEMO_LOCATIONS)) : defaultLocationCount;
+
+  const stableRng = mulberry32(fnv1a32(`clawcraft:demo-locations:${RUN_ID}`));
+  const rest = allUnique.filter((name) => name !== LOCATION);
+  shuffle(rest, stableRng);
+  const uniqueLocations = [LOCATION, ...rest].slice(0, desiredLocationCount);
   const questsByLocation = new Map();
 
   for (const name of uniqueLocations) {
