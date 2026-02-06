@@ -43,7 +43,7 @@ Scope: scale the Clawcraft world from the demo 5-POI map to a kingdom-scale map 
 ### Spectator rendering support
 
 To avoid “no icons except 5” when scaling to 100+ POIs, the spectator map uses:
-- Bespoke sprite icons for the canonical 5 POIs (if assets exist)
+- Bespoke sprite icons for a growing set of “signature POIs” (if assets exist)
 - Generic POI icon sprites per `LocationType`
   - Uses PNGs when available: `public/assets/poi/icon-*.png`
   - Falls back to in-browser procedural pixel icons if missing
@@ -53,9 +53,10 @@ Code: `src/components/spectator/WorldMap.tsx`
 ### Biomes + decoration overlays
 
 To align with the spec’s “hybrid approach” (tile base + overlay sprites), the spectator map renders:
-- A code-generated tiled base terrain texture (plains)
-- A biome patch around each POI (tiled pixel texture per biome tag)
-- Transparent overlay sprites around each POI (biome-specific decoration clusters)
+- Background: a deterministic **biome region fill** (low-res “tile field” scaled up with nearest-neighbor)
+- Midground: macro decor clusters scattered across biome regions
+  - Current assets: `public/assets/decor/decor-macro-*.png`
+- Foreground: micro decor clusters around each POI
   - Current assets: `public/assets/decor/decor-*.png`
   - Loaded best-effort; falls back to procedural decor if an asset is missing
 
@@ -79,15 +80,18 @@ To align with the spec’s “hybrid approach” (tile base + overlay sprites), 
 2. **Biome richness**
    - Current:
      - 6 micro decoration overlay variants per biome (64x64) selected deterministically per POI.
-     - Generic POI icon sprites per `LocationType`.
+     - 2 macro decor cluster variants per biome (256x256) placed deterministically across biome regions.
+     - Signature POI sprites for major cities + a few landmarks (biome-aware).
+     - Generic POI icon sprites per `LocationType` (fallback).
    - Next (make this the source-of-truth target for “variety”):
      - Micro decorations: **6 variants per biome** (64x64). (done)
-     - Macro clusters: **2 variants per biome** (256x256, transparent PNG) placed deterministically in each biome region.
-     - Signature POIs: **10-15 biome-aware POI sprites** (128-256px) to replace generic icons for major towns/landmarks:
-       - castle, port, mine, shrine, ruins gate, wizard tower, desert oasis town, snowy keep, etc.
-     - Region backgrounds: replace “biome circles around POIs” with **biome region fill** so terrain is legible at default zoom:
-       - Approach A (fast): deterministic Voronoi regions seeded by POIs tagged with the same biome.
-       - Approach B (nicer): noise-driven biome field constrained by POI tags.
+     - Macro clusters: **2 variants per biome** (256x256, transparent PNG) placed deterministically in each biome region. (done)
+     - Signature POIs: **10-15 biome-aware POI sprites** (128-256px) to replace generic icons for major towns/landmarks. (done, initial set)
+       - Examples: castle, port, mine, shrine, ruins gate, wizard tower, desert oasis town, snowy keep, etc.
+     - Next target for “more variety” without exploding asset count:
+       - Per-biome `LocationType` variants for towns + dungeons (forest town vs desert town, etc.)
+       - Add 2-4 additional macro cluster variants for biomes that still feel repetitive at 100+ POIs (forest/plains likely first)
+     - Region backgrounds: replace “biome circles around POIs” with **biome region fill** so terrain is legible at default zoom. (done)
    - Asset creation pipeline remains:
      - `docs/plans/2026-02-04-visual-assets-pipeline.md`
 3. **Quality pass on POI naming + descriptions**
