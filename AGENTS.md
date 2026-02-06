@@ -52,3 +52,7 @@ These are persistent preferences for Codex agents working in this repository.
 - Demo populater supports `DEMO_LOCATIONS` (defaults to 24 on large worlds) to spread agents across more POIs.
 
 - Generic POI icon PNGs live in `public/assets/poi/icon-*.png` and override the procedural fallback when present.
+
+- Biome field background now adds light boundary dithering (shoreline / snowline / forest edge) so regions read as designed, not purely Voronoi.
+
+- POI micro-decoration placement cycles through a shuffled texture pool before repeating to reduce obvious repetition.
