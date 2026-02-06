@@ -22,6 +22,7 @@ Why: one platform for web + DB, no special Vercel storage integrations needed, q
 ### Environment variables (web)
 
 - `DATABASE_URL`: from the Railway Postgres service
+  - Note: if the private host (`Postgres.railway.internal`) is unreachable from the `web` container (Prisma `P1001`), use the Postgres `DATABASE_PUBLIC_URL` instead.
 - `DEV_MODE=true`: enable demo timing + mock quest generation even in a production build
 - `DEV_TIME_SCALE=360`: 30min status steps become ~5s; 12h cooldown becomes ~2min
 - `DEV_MOCK_LLM=true`: quests/statuses use deterministic mock generators (no OpenRouter required)
@@ -39,6 +40,8 @@ For Railway, ensure the service start command runs:
 2. `node scripts/dev/seed.mjs` (idempotent)
 3. `next start -p $PORT`
 
+Implementation note (repo): `package.json` `start` runs `node scripts/railway/start.mjs`, which performs the above then binds Next.js to `0.0.0.0` for Railway edge connectivity.
+
 ### Populate agents for a “living world”
 
 After the app is live:
@@ -54,4 +57,3 @@ This creates demo agents and starts quests so status bubbles appear on the map.
 - Demo mode is opt-in: `DEV_MODE=true` is required for “dev-like” timing in non-local deployments.
 - Synthetic agent query params on `/api/world-state` are disabled when `DEV_MODE` is forced (demo safety).
 - Never store secrets in git; set them only in the hosting environment.
-
