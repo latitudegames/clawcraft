@@ -16,7 +16,7 @@ These are persistent preferences for Codex agents working in this repository.
 - `op` (1Password CLI): installed and authenticated via service-account context (`op whoami` works).
 - `rg` (ripgrep): installed.
 - Python `PyYAML`: installed for skill scaffolding/validation tooling.
-- OpenRouter key is available locally via `OPENROUTER_API_KEY` (exported in `~/.zshrc`, sourced from 1Password item `OPENROUTER_AGENTS`).
+- OpenRouter key is available locally via `OPENROUTER_API_KEY` (exported in `~/.zshenv`, sourced from 1Password item `OPENROUTER_AGENTS`).
 - Postgres CLI (psql) is not installed; use Prisma/Node scripts for DB inspection until installed.
 
 ## Skill Inventory Additions
