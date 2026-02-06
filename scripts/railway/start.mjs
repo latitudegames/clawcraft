@@ -18,7 +18,8 @@ function run(cmd, args, opts = {}) {
 
 async function main() {
   const port = process.env.PORT ?? "3000";
-  const hostname = process.env.HOSTNAME ?? "0.0.0.0";
+  // Don't use $HOSTNAME (usually a container id). Bind to 0.0.0.0 so Railway edge can reach the service.
+  const hostname = process.env.NEXT_HOSTNAME ?? "0.0.0.0";
   const isRailway = Boolean(process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID);
   const hasDb = Boolean(process.env.DATABASE_URL);
 
@@ -40,4 +41,3 @@ main().catch((err) => {
   console.error(err);
   process.exitCode = 1;
 });
-
