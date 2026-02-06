@@ -55,7 +55,10 @@ Scope: Spectator UI parity vs:
 - [x] World-state endpoint cache + in-flight dedupe
 - [x] Build and runtime stability under current test suite
 - [x] World-state perf baseline recorded (`npm run dev:perf:world-state`)
+- [x] Dev-only synthetic world-state load mode for stress testing (`/api/world-state?synth_agents=2000&synth_only=1`)
+- [x] Headless render perf harness added (`npm run dev:perf:map-render`)
 - [ ] Manual interaction profiling under demo population load (frontend)
+- [x] Record map render perf baseline under synthetic load (see `docs/plans/2026-02-06-wave-11-load-testing-harness-log.md`)
 
 ## Remaining Gaps
 

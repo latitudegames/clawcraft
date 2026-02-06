@@ -75,6 +75,7 @@ If conflicts appear, update this tracker with the decision and link the doc chan
 - [x] Added a manual SR walkthrough checklist doc (`docs/plans/2026-02-06-screen-reader-navigation-walkthrough.md`)
 - [ ] Performance pass for map responsiveness and network cadence
 - [x] World-state perf harness added and baseline recorded (`npm run dev:perf:world-state`)
+- [x] Dev-only synthetic load harness added (`/api/world-state?synth_agents=...`) + headless render perf runner (`npm run dev:perf:map-render`)
 
 ## Decision Log
 

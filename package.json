@@ -23,6 +23,7 @@
     "dev:a11y": "node scripts/dev/a11y-audit.mjs",
     "dev:sr": "node scripts/dev/sr-smoke.mjs",
     "dev:perf:world-state": "node scripts/dev/perf-world-state.mjs",
+    "dev:perf:map-render": "node scripts/dev/perf-map-render.mjs",
     "dev:jobs": "node scripts/dev/jobs.mjs",
     "sim:smoke": "tsc -p tsconfig.node-tests.json && npm run node:prep && node .tmp/node-tests/lib/sim/smoke.js"
   },

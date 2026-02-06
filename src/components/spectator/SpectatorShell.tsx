@@ -16,7 +16,30 @@ export function SpectatorShell() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { data, error, isLoading } = useWorldState();
+  const synthAgentsRaw = searchParams.get("synth_agents");
+  const synthStatusRaw = searchParams.get("synth_status");
+  const synthPartyRaw = searchParams.get("synth_party");
+  const synthOnlyRaw = searchParams.get("synth_only");
+  const synthSeedRaw = searchParams.get("synth_seed");
+
+  const synthAgents = synthAgentsRaw ? Number.parseInt(synthAgentsRaw, 10) : null;
+  const synthStatus = synthStatusRaw ? Number.parseFloat(synthStatusRaw) : null;
+  const synthParty = synthPartyRaw ? Number.parseFloat(synthPartyRaw) : null;
+  const synthOnly = synthOnlyRaw === "1" || synthOnlyRaw === "true" || synthOnlyRaw === "yes";
+  const synthSeed = synthSeedRaw ?? null;
+
+  const worldQuery =
+    Number.isFinite(synthAgents) && (synthAgents as number) > 0
+      ? {
+          synth_agents: synthAgents as number,
+          ...(Number.isFinite(synthStatus) ? { synth_status: synthStatus as number } : {}),
+          ...(Number.isFinite(synthParty) ? { synth_party: synthParty as number } : {}),
+          ...(synthOnly ? { synth_only: true } : {}),
+          ...(synthSeed ? { synth_seed: synthSeed } : {})
+        }
+      : undefined;
+
+  const { data, error, isLoading } = useWorldState(worldQuery);
   const selectedAgent = searchParams.get("agent");
   const mobileLeaderboardOpen = useSpectatorUiStore((state) => state.mobileLeaderboardOpen);
   const setMobileLeaderboardOpen = useSpectatorUiStore((state) => state.setMobileLeaderboardOpen);
@@ -108,6 +131,7 @@ export function SpectatorShell() {
         <div className="mt-1 flex items-center gap-3 opacity-80">
           <span>Locations: {data?.locations.length ?? "—"}</span>
           <span>Agents: {data?.agents.length ?? "—"}</span>
+          {worldQuery?.synth_agents ? <span className="cc-font-rank">+{worldQuery.synth_agents} synth</span> : null}
         </div>
         {data?.server_time ? <div className="mt-1 opacity-70">{new Date(data.server_time).toLocaleString()}</div> : null}
       </div>

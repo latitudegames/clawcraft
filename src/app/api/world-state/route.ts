@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { DEV_CONFIG } from "@/config/dev-mode";
 import { prisma } from "@/lib/db/prisma";
 import { scaleDurationMs, questStepInfoAt } from "@/lib/game/timing";
+import { withSyntheticAgents } from "@/lib/game/synthetic-world-state";
 import { resolveQuestRun } from "@/lib/server/resolve-quest-run";
 import { createAsyncTtlCache } from "@/lib/utils/async-ttl-cache";
 import type { WorldStateResponse } from "@/types/world-state";
@@ -143,7 +144,48 @@ async function computeWorldState(): Promise<WorldStateResponse> {
   };
 }
 
-export async function GET() {
+function parseIntParam(params: URLSearchParams, key: string): number | null {
+  const raw = params.get(key);
+  if (!raw) return null;
+  const n = Number.parseInt(raw, 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+function parseFloatParam(params: URLSearchParams, key: string): number | null {
+  const raw = params.get(key);
+  if (!raw) return null;
+  const n = Number.parseFloat(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+function parseBoolParam(params: URLSearchParams, key: string): boolean {
+  const raw = params.get(key);
+  return raw === "1" || raw === "true" || raw === "yes";
+}
+
+export async function GET(request: Request) {
   const state = await worldStateCache.get(computeWorldState);
-  return NextResponse.json(state);
+
+  // Dev-only load testing mode: append synthetic agents for stress testing Pixi + bubble overlay behavior.
+  // Production should ignore these query params.
+  if (!DEV_CONFIG.DEV_MODE) return NextResponse.json(state);
+
+  const { searchParams } = new URL(request.url);
+  const synthAgents = parseIntParam(searchParams, "synth_agents");
+  if (!synthAgents || synthAgents <= 0) return NextResponse.json(state);
+
+  const seed = searchParams.get("synth_seed") ?? undefined;
+  const synthStatus = parseFloatParam(searchParams, "synth_status") ?? undefined;
+  const synthParty = parseFloatParam(searchParams, "synth_party") ?? undefined;
+  const synthOnly = parseBoolParam(searchParams, "synth_only");
+
+  const next = withSyntheticAgents(state, {
+    count: synthAgents,
+    seed,
+    statusRate: synthStatus,
+    partyRate: synthParty,
+    only: synthOnly
+  });
+
+  return NextResponse.json(next);
 }

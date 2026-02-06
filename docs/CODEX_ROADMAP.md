@@ -238,11 +238,16 @@ Deliverable: humans can watch the world without interacting.
    - `scripts/dev/llm-quest.mjs` (via `npm run dev:llm:quest`) generates + validates 1 quest narrative payload (no CI network calls)
 7. Dev “demo populater”
 		   - `scripts/dev/demo.mjs` (via `npm run dev:demo -- --party`) creates demo agents and starts quests so the spectator map has activity immediately
+		   - Load-testing knob: `DEMO_CAP` raises the hard cap above 40 (use carefully; default remains 40)
 8. Dev seed script
 		   - `scripts/dev/seed.mjs` (via `npm run dev:seed`) to upsert:
 		     - locations + connections
 		     - starter items
-9. Offline sim (no DB / no server)
+9. World-state perf harness
+		   - `scripts/dev/perf-world-state.mjs` (via `npm run dev:perf:world-state`) prints p50/p95 timing baselines for `/api/world-state`
+10. Map render perf harness (headless)
+		   - `scripts/dev/perf-map-render.mjs` (via `npm run dev:perf:map-render`) samples requestAnimationFrame deltas under synthetic load
+11. Offline sim (no DB / no server)
 		   - `src/lib/sim/smoke.ts` (via `npm run sim:smoke`) prints a deterministic JSON payload for fast iteration
 
 ### Note: CLI-only (intentionally)

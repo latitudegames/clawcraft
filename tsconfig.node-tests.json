@@ -27,6 +27,8 @@
     "src/lib/game/character.test.ts",
     "src/lib/game/timing.ts",
     "src/lib/game/timing.test.ts",
+    "src/lib/game/synthetic-world-state.ts",
+    "src/lib/game/synthetic-world-state.test.ts",
     "src/lib/game/quest-progress.ts",
     "src/lib/game/quest-resolution.ts",
     "src/lib/game/quest-resolution.test.ts",
