@@ -47,7 +47,7 @@ Scope: Spectator UI parity vs:
 - [x] Toast live-region semantics (`role="status"`, `aria-live`)
 - [x] Contrast audit pass (axe-core across baseline + drawer + modal; `npm run dev:a11y`)
 - [x] Screen-reader semantics smoke (role-based checks; `npm run dev:sr`)
-- [ ] Screen-reader navigation walkthrough
+- [ ] Screen-reader navigation walkthrough (see `docs/plans/2026-02-06-screen-reader-navigation-walkthrough.md`)
 
 ## Performance & Runtime Checklist
 
