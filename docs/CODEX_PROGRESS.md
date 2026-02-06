@@ -253,6 +253,7 @@ Determinism checks:
   - Bubble declutter: when zoomed out, solo bubbles group by nearest POI and selection prefers bubbles near viewport center
   - POI label declutter: show/hide by POI type + zoom; always show hovered/pinned POI label
   - Lightweight biome decoration overlays (procedural sprites) to reduce flatness around POIs
+  - Smooth wheel zoom tween (~300ms ease-out) while keeping the cursor’s world point pinned; cancels on drag/pinch and HUD interactions
   - Updated parity screenshots (`npm run dev:parity:screenshots`)
   - Map zoom controls (+/−/reset) and a manual Center button
   - Leaderboard highlights the selected player; Enter selects the top search result

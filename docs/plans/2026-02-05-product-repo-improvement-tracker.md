@@ -54,6 +54,7 @@ If conflicts appear, update this tracker with the decision and link the doc chan
 - [x] Reduce bubble noise when zoomed out by grouping solo bubbles by nearest POI and selecting bubbles near the viewport center
 - [x] Declutter POI labels by type + zoom; always show hovered/pinned POI label
 - [x] Add lightweight biome decoration overlays around POIs (procedural textures as a stand-in for the asset overlay pipeline)
+- [x] Smooth wheel zoom tween (~300ms ease-out) while keeping the cursor’s world point pinned (matches spec “Map Zoom” feel)
 
 ### M4: Motion + Timing Parity
 - [x] Framer Motion transitions for modal/tabs/panel/bubbles

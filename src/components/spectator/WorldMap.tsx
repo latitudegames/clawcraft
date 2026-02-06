@@ -382,6 +382,18 @@ type PixiScene = {
   locationLabelsById: Map<string, Text>;
 };
 
+type WheelZoomTween = {
+  raf: number | null;
+  startMs: number;
+  durationMs: number;
+  fromScale: number;
+  toScale: number;
+  cursorX: number;
+  cursorY: number;
+  worldX: number;
+  worldY: number;
+};
+
 export function WorldMap({
   world,
   focusUsername,
@@ -415,9 +427,15 @@ export function WorldMap({
   }, [world.agents]);
 
   const [camera, setCamera] = useState<CameraTransform>({ scale: 1, x: 0, y: 0 });
+  const cameraRef = useRef(camera);
+  useEffect(() => {
+    cameraRef.current = camera;
+  }, [camera]);
+
   const [assetsVersion, setAssetsVersion] = useState(0);
   const [sceneVersion, setSceneVersion] = useState(0);
   const didInitCamera = useRef(false);
+  const wheelZoomTween = useRef<WheelZoomTween | null>(null);
   const focusedFor = useRef<string | null>(null);
   const pixi = useRef<PixiScene | null>(null);
   const [hoverPoiId, setHoverPoiId] = useState<string | null>(null);
@@ -428,6 +446,19 @@ export function WorldMap({
     () => ({ width: Math.max(1, size.width - desktopRightInsetPx), height: size.height }),
     [desktopRightInsetPx, size.height, size.width]
   );
+
+  const cancelWheelZoomTween = () => {
+    const tween = wheelZoomTween.current;
+    if (tween?.raf != null) cancelAnimationFrame(tween.raf);
+    wheelZoomTween.current = null;
+  };
+
+  useEffect(() => {
+    return () => {
+      const tween = wheelZoomTween.current;
+      if (tween?.raf != null) cancelAnimationFrame(tween.raf);
+    };
+  }, []);
 
   const partyMembersByRun = useMemo(() => {
     const byRun = new Map<string, string[]>();
@@ -1133,6 +1164,7 @@ export function WorldMap({
 
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId);
+    cancelWheelZoomTween();
     pointers.current.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
 
     // Two-pointer gestures take over from single-pointer drag (pinch-to-zoom + two-finger pan).
@@ -1288,17 +1320,54 @@ export function WorldMap({
     const cursorX = e.clientX - rect.left;
     const cursorY = e.clientY - rect.top;
 
+    const prev = cameraRef.current;
     const zoomIntensity = 0.0015;
-    const nextScale = clamp(camera.scale * (1 - e.deltaY * zoomIntensity), MIN_SCALE, MAX_SCALE);
+    const nextScale = clamp(prev.scale * (1 - e.deltaY * zoomIntensity), MIN_SCALE, MAX_SCALE);
+    if (nextScale === prev.scale) return;
 
-    const worldX = (cursorX - camera.x) / camera.scale;
-    const worldY = (cursorY - camera.y) / camera.scale;
+    const worldX = (cursorX - prev.x) / prev.scale;
+    const worldY = (cursorY - prev.y) / prev.scale;
 
-    setCamera({
-      scale: nextScale,
-      x: cursorX - worldX * nextScale,
-      y: cursorY - worldY * nextScale
-    });
+    // Smooth wheel zoom to match the design spec: keep the world point under the cursor pinned
+    // while easing the scale toward the target.
+    cancelWheelZoomTween();
+
+    const startMs = typeof performance !== "undefined" ? performance.now() : Date.now();
+    const tween: WheelZoomTween = {
+      raf: null,
+      startMs,
+      durationMs: 300,
+      fromScale: prev.scale,
+      toScale: nextScale,
+      cursorX,
+      cursorY,
+      worldX,
+      worldY
+    };
+
+    const tick = (ts: number) => {
+      const state = wheelZoomTween.current;
+      if (!state) return;
+
+      const t = clamp((ts - state.startMs) / state.durationMs, 0, 1);
+      const k = 1 - Math.pow(1 - t, 3); // easeOutCubic
+      const scale = state.fromScale + (state.toScale - state.fromScale) * k;
+
+      setCamera({
+        scale,
+        x: state.cursorX - state.worldX * scale,
+        y: state.cursorY - state.worldY * scale
+      });
+
+      if (t < 1) {
+        state.raf = requestAnimationFrame(tick);
+      } else {
+        wheelZoomTween.current = null;
+      }
+    };
+
+    tween.raf = requestAnimationFrame(tick);
+    wheelZoomTween.current = tween;
   };
 
   const bubbles = useMemo(() => {
@@ -1532,7 +1601,10 @@ export function WorldMap({
 
       <div
         className="absolute bottom-3 left-3 flex items-end gap-2"
-        onPointerDown={(e) => e.stopPropagation()}
+        onPointerDown={(e) => {
+          e.stopPropagation();
+          cancelWheelZoomTween();
+        }}
         onWheel={(e) => e.stopPropagation()}
       >
         <div className="cc-glass flex overflow-hidden rounded-md text-xs text-ink-brown shadow-sm">
@@ -1541,6 +1613,7 @@ export function WorldMap({
             className="px-3 py-2 hover:bg-white"
             aria-label="Zoom in"
             onClick={() => {
+              cancelWheelZoomTween();
               didInitCamera.current = true;
               const cx = effectiveViewport.width / 2;
               const cy = size.height / 2;
@@ -1560,6 +1633,7 @@ export function WorldMap({
             className="border-l border-black/10 px-3 py-2 hover:bg-white"
             aria-label="Zoom out"
             onClick={() => {
+              cancelWheelZoomTween();
               didInitCamera.current = true;
               const cx = effectiveViewport.width / 2;
               const cy = size.height / 2;
@@ -1581,6 +1655,7 @@ export function WorldMap({
             onClick={() => {
               if (!bounds) return;
               if (size.width <= 0 || size.height <= 0) return;
+              cancelWheelZoomTween();
               didInitCamera.current = true;
 
               const next = fitViewportCamera({
@@ -1608,6 +1683,7 @@ export function WorldMap({
               if (typeof agentX !== "number" || typeof agentY !== "number") return;
               if (size.width <= 0 || size.height <= 0) return;
 
+              cancelWheelZoomTween();
               didInitCamera.current = true;
               setCamera((prev) =>
                 computeCenterTransform({
