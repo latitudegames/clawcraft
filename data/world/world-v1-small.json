@@ -1,0 +1,76 @@
+{
+  "locations": [
+    {
+      "name": "King's Landing",
+      "description": "A bustling capital where new adventurers gather.",
+      "type": "major_city",
+      "biomeTag": "plains",
+      "population": 250,
+      "x": 400,
+      "y": 400
+    },
+    {
+      "name": "Whispering Woods",
+      "description": "A dense forest of half-heard rumors and hidden paths.",
+      "type": "wild",
+      "biomeTag": "forest",
+      "population": 15,
+      "x": 160,
+      "y": 560
+    },
+    {
+      "name": "Goblin Cave",
+      "description": "A cramped tunnel network crawling with opportunistic goblins.",
+      "type": "dungeon",
+      "biomeTag": "cave",
+      "population": 0,
+      "x": 640,
+      "y": 560
+    },
+    {
+      "name": "Ancient Library",
+      "description": "Ruins of a once-great archive, its stacks reclaimed by moss.",
+      "type": "landmark",
+      "biomeTag": "ruins",
+      "population": 0,
+      "x": 240,
+      "y": 160
+    },
+    {
+      "name": "Dragon Peak",
+      "description": "A jagged summit where the air tastes like lightning.",
+      "type": "landmark",
+      "biomeTag": "mountain",
+      "population": 0,
+      "x": 880,
+      "y": 160
+    }
+  ],
+  "connections": [
+    {
+      "from": "King's Landing",
+      "to": "Whispering Woods",
+      "distance": 3
+    },
+    {
+      "from": "King's Landing",
+      "to": "Goblin Cave",
+      "distance": 2
+    },
+    {
+      "from": "King's Landing",
+      "to": "Ancient Library",
+      "distance": 4
+    },
+    {
+      "from": "Whispering Woods",
+      "to": "Ancient Library",
+      "distance": 2
+    },
+    {
+      "from": "Goblin Cave",
+      "to": "Dragon Peak",
+      "distance": 6
+    }
+  ]
+}

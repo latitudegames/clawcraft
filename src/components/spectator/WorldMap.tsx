@@ -16,10 +16,14 @@ import { computeRoadPolyline } from "@/lib/ui/roads";
 import type { AgentSpriteKey } from "@/lib/ui/sprites";
 import { AGENT_SPRITE_KEYS, agentSpriteKeyForUsername } from "@/lib/ui/sprites";
 import { createRng } from "@/lib/utils/rng";
-import type { WorldStateResponse } from "@/types/world-state";
+import type { WorldStateLocation, WorldStateResponse } from "@/types/world-state";
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
+}
+
+function mod(n: number, m: number) {
+  return ((n % m) + m) % m;
 }
 
 const MIN_SCALE = 0.35;
@@ -38,6 +42,8 @@ const LOCATION_GROUPING_RADIUS_WORLD = 72;
 
 const BIOME_TILE_SIZE = 64;
 const TERRAIN_PADDING_WORLD = 900;
+const BIOME_FIELD_MIN_PIXEL_SIZE_WORLD = 8;
+const BIOME_FIELD_MAX_DIM_PX = 2048;
 
 function cssVar(name: string): string | null {
   if (typeof window === "undefined") return null;
@@ -263,6 +269,123 @@ function makeBiomeDecorationCanvas(tag: string): HTMLCanvasElement | null {
   return canvas;
 }
 
+function hashWorldLocationsForBiomeField(locations: WorldStateLocation[]): number {
+  // Stable uint32 hash for deciding when the biome field texture must be regenerated.
+  let h = 2166136261;
+  for (const l of locations) {
+    if (typeof l.x !== "number" || typeof l.y !== "number") continue;
+    const s = `${l.id}:${l.biome_tag ?? ""}:${Math.round(l.x)}:${Math.round(l.y)}`;
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+  }
+  return h >>> 0;
+}
+
+function hash2DToUnitFloat(x: number, y: number, seed: number): number {
+  // Fast deterministic 0..1 hash noise for boundary jitter.
+  let h = seed >>> 0;
+  h = Math.imul(h ^ (x >>> 0), 0x9e3779b1);
+  h = Math.imul(h ^ (y >>> 0), 0x85ebca6b);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+
+function makeBiomeFieldCanvas(args: {
+  locations: WorldStateLocation[];
+  terrain: { x: number; y: number; width: number; height: number };
+  pixelSizeWorld: number;
+  pixelWidth: number;
+  pixelHeight: number;
+}): HTMLCanvasElement | null {
+  if (typeof document === "undefined") return null;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = args.pixelWidth;
+  canvas.height = args.pixelHeight;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) return null;
+
+  const pointsByBiome = new Map<BiomeTag, Array<{ x: number; y: number }>>();
+  for (const tag of BIOME_TAGS) pointsByBiome.set(tag, []);
+
+  for (const l of args.locations) {
+    if (typeof l.x !== "number" || typeof l.y !== "number") continue;
+    const tag = (BIOME_TAGS as readonly string[]).includes(l.biome_tag ?? "") ? (l.biome_tag as BiomeTag) : "plains";
+    pointsByBiome.get(tag)?.push({ x: l.x, y: l.y });
+  }
+
+  const tileDataByBiome = new Map<BiomeTag, { data: Uint8ClampedArray; ox: number; oy: number }>();
+  for (const tag of BIOME_TAGS) {
+    const tile = makeBiomeTileCanvas(tag) ?? makeBiomeTileCanvas("plains");
+    if (!tile) continue;
+    const tctx = tile.getContext("2d", { willReadFrequently: true });
+    if (!tctx) continue;
+    const img = tctx.getImageData(0, 0, BIOME_TILE_SIZE, BIOME_TILE_SIZE);
+    const rng = createRng(`clawcraft:biome-field-tile:${tag}`);
+    tileDataByBiome.set(tag, { data: img.data, ox: rng.int(0, BIOME_TILE_SIZE - 1), oy: rng.int(0, BIOME_TILE_SIZE - 1) });
+  }
+
+  const img = ctx.createImageData(args.pixelWidth, args.pixelHeight);
+  const data = img.data;
+  const noiseSeed = createRng("clawcraft:biome-field-noise").int(1, 0x7fffffff);
+
+  for (let py = 0; py < args.pixelHeight; py++) {
+    const worldY = args.terrain.y + (py + 0.5) * args.pixelSizeWorld;
+    for (let px = 0; px < args.pixelWidth; px++) {
+      const worldX = args.terrain.x + (px + 0.5) * args.pixelSizeWorld;
+
+      let bestTag: BiomeTag = "plains";
+      let bestScore = Number.POSITIVE_INFINITY;
+
+      // Assign the biome based on the *nearest POI of each biome*.
+      // This keeps POIs in the right biome while still allowing large contiguous regions
+      // when POIs are clustered by biome.
+      for (const tag of BIOME_TAGS) {
+        const pts = pointsByBiome.get(tag);
+        if (!pts || pts.length === 0) continue;
+        let best = Number.POSITIVE_INFINITY;
+        for (const p of pts) {
+          const dx = worldX - p.x;
+          const dy = worldY - p.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < best) best = d2;
+        }
+
+        // Small boundary roughness so regions don't look like perfect distance fields.
+        const jitter = 1 + (hash2DToUnitFloat(px, py, noiseSeed) - 0.5) * 0.18;
+        const score = best * jitter;
+        if (score < bestScore) {
+          bestScore = score;
+          bestTag = tag;
+        }
+      }
+
+      const tile = tileDataByBiome.get(bestTag) ?? tileDataByBiome.get("plains") ?? null;
+      const outIdx = (py * args.pixelWidth + px) * 4;
+      if (!tile) {
+        data[outIdx] = 126;
+        data[outIdx + 1] = 200;
+        data[outIdx + 2] = 80;
+        data[outIdx + 3] = 255;
+        continue;
+      }
+
+      const tx = mod(Math.floor(worldX) + tile.ox, BIOME_TILE_SIZE);
+      const ty = mod(Math.floor(worldY) + tile.oy, BIOME_TILE_SIZE);
+      const tileIdx = (ty * BIOME_TILE_SIZE + tx) * 4;
+      data[outIdx] = tile.data[tileIdx] ?? 0;
+      data[outIdx + 1] = tile.data[tileIdx + 1] ?? 0;
+      data[outIdx + 2] = tile.data[tileIdx + 2] ?? 0;
+      data[outIdx + 3] = 255;
+    }
+  }
+
+  ctx.putImageData(img, 0, 0);
+  return canvas;
+}
+
 function fitViewportCamera(args: {
   bounds: { minX: number; minY: number; maxX: number; maxY: number };
   viewport: { width: number; height: number };
@@ -280,7 +403,7 @@ function fitViewportCamera(args: {
     viewport: effectiveViewport,
     padding: args.padding
   });
-  const scale = clamp(fit.scale, 0.5, 6);
+  const scale = clamp(fit.scale, MIN_SCALE, 6);
   if (scale === fit.scale) return fit;
 
   const cx = (args.bounds.minX + args.bounds.maxX) / 2;
@@ -332,8 +455,117 @@ function colorForBiomeTag(tag: string | null | undefined): number {
   }
 }
 
-const POI_ICON_KEYS = ["kings-landing", "whispering-woods", "goblin-cave", "ancient-library", "dragon-peak"] as const;
-type PoiIconKey = (typeof POI_ICON_KEYS)[number];
+const UNIQUE_POI_ICON_KEYS = [
+  "kings-landing",
+  "whispering-woods",
+  "goblin-cave",
+  "ancient-library",
+  "dragon-peak",
+  // Major cities (biome-aware, replaces generic type icons).
+  "woodcrest",
+  "sandport",
+  "frostgate",
+  "highspire",
+  "mossgate",
+  "seastone-harbor",
+  // Landmarks (biome-aware).
+  "demon-kings-castle",
+  "wind-lighthouse",
+  "star-shrine",
+  "tide-beacon"
+] as const;
+const UNIQUE_POI_ICON_KEY_SET = new Set<string>(UNIQUE_POI_ICON_KEYS);
+
+const GENERIC_POI_ICON_KEYS = ["icon-major-city", "icon-town", "icon-dungeon", "icon-wild", "icon-landmark"] as const;
+
+type PoiIconKey = (typeof UNIQUE_POI_ICON_KEYS)[number] | (typeof GENERIC_POI_ICON_KEYS)[number];
+
+const BIOME_TAGS = ["plains", "forest", "cave", "ruins", "mountain", "snow", "water", "desert"] as const;
+type BiomeTag = (typeof BIOME_TAGS)[number];
+
+// Hybrid map approach: code-generated base terrain + AI-generated overlay clusters.
+// We keep these generic per biome initially (instead of bespoke per-POI art) to scale
+// to 100+ locations while maintaining variety and a consistent look.
+const DECOR_ASSET_KEYS_BY_BIOME: Record<BiomeTag, string[]> = {
+  plains: [
+    "decor-plains-flowers-a",
+    "decor-plains-grass-b",
+    "decor-plains-rocks-c",
+    "decor-plains-fence-hay-d",
+    "decor-plains-bushes-e",
+    "decor-plains-stump-f"
+  ],
+  forest: [
+    "decor-forest-pines-a",
+    "decor-forest-mushrooms-b",
+    "decor-forest-log-c",
+    "decor-forest-berries-d",
+    "decor-forest-ferns-e",
+    "decor-forest-pinecones-f"
+  ],
+  cave: [
+    "decor-cave-stalagmites-a",
+    "decor-cave-crystals-b",
+    "decor-cave-ore-c",
+    "decor-cave-bones-d",
+    "decor-cave-webs-e",
+    "decor-cave-puddle-f"
+  ],
+  ruins: [
+    "decor-ruins-columns-a",
+    "decor-ruins-rubble-b",
+    "decor-ruins-statue-c",
+    "decor-ruins-vines-d",
+    "decor-ruins-altar-e",
+    "decor-ruins-mosaic-f"
+  ],
+  mountain: [
+    "decor-mountain-rocks-a",
+    "decor-mountain-boulders-b",
+    "decor-mountain-spires-c",
+    "decor-mountain-shrubs-d",
+    "decor-mountain-cairn-e",
+    "decor-mountain-alpine-f"
+  ],
+  snow: [
+    "decor-snow-pines-a",
+    "decor-snow-rocks-b",
+    "decor-snow-ice-c",
+    "decor-snow-drift-prints-d",
+    "decor-snow-bushes-e",
+    "decor-snow-icicles-f"
+  ],
+  water: [
+    "decor-water-lilies-a",
+    "decor-water-kelp-b",
+    "decor-water-reeds-c",
+    "decor-water-rocks-foam-d",
+    "decor-water-foam-e",
+    "decor-water-fish-f"
+  ],
+  desert: [
+    "decor-desert-cactus-a",
+    "decor-desert-rocks-b",
+    "decor-desert-oasis-c",
+    "decor-desert-bones-d",
+    "decor-desert-dunes-e",
+    "decor-desert-cracked-earth-f"
+  ]
+};
+
+// Macro decor clusters: larger sprites placed throughout each biome region (midground).
+// These assets should be visually distinct from the micro decor so the world reads as a
+// biome first, then reveals detail as you zoom.
+const MACRO_DECOR_ASSET_KEYS_BY_BIOME: Record<BiomeTag, string[]> = {
+  plains: ["decor-macro-plains-wheatfield-a", "decor-macro-plains-stonecircle-b"],
+  forest: ["decor-macro-forest-grove-a", "decor-macro-forest-clearing-b"],
+  cave: ["decor-macro-cave-crystals-a", "decor-macro-cave-stalagmites-b"],
+  ruins: ["decor-macro-ruins-archway-a", "decor-macro-ruins-statuegarden-b"],
+  mountain: ["decor-macro-mountain-cliffs-a", "decor-macro-mountain-alpine-b"],
+  snow: ["decor-macro-snow-pines-a", "decor-macro-snow-icefield-b"],
+  water: ["decor-macro-water-reef-a", "decor-macro-water-lilypadfield-b"],
+  desert: ["decor-macro-desert-dunes-a", "decor-macro-desert-oasis-b"]
+};
 
 function slugifyPoiName(name: string): string {
   return name
@@ -343,19 +575,169 @@ function slugifyPoiName(name: string): string {
     .replace(/(^-|-$)+/g, "");
 }
 
+function iconKeyForLocation(loc: { name: string; type: string }): PoiIconKey {
+  const slug = slugifyPoiName(loc.name);
+  if (UNIQUE_POI_ICON_KEY_SET.has(slug)) return slug as PoiIconKey;
+
+  switch (loc.type) {
+    case "major_city":
+      return "icon-major-city";
+    case "town":
+      return "icon-town";
+    case "dungeon":
+      return "icon-dungeon";
+    case "wild":
+      return "icon-wild";
+    case "landmark":
+      return "icon-landmark";
+    default:
+      return "icon-town";
+  }
+}
+
+function makeGenericPoiIconCanvas(key: (typeof GENERIC_POI_ICON_KEYS)[number]): HTMLCanvasElement | null {
+  if (typeof document === "undefined") return null;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 128;
+  canvas.height = 128;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  ctx.clearRect(0, 0, 128, 128);
+
+  // 32x32 "pixel grid" scaled up 4x for crisp nearest-neighbor rendering.
+  const p = 4;
+  const dot = (x: number, y: number, w: number, h: number, color: string) => {
+    ctx.fillStyle = color;
+    ctx.fillRect(x * p, y * p, w * p, h * p);
+  };
+
+  const ink = "#4A3728";
+  const parchment = "#F5E6C8";
+  const gold = "#FFD859";
+  const coral = "#FF6B6B";
+  const sky = "#87CEEB";
+  const grass = "#7EC850";
+  const stone = "#8B9BB4";
+
+  // Shared subtle drop-shadow base.
+  dot(6, 26, 20, 2, "rgba(0,0,0,0.12)");
+
+  switch (key) {
+    case "icon-major-city": {
+      // Castle-ish silhouette.
+      dot(8, 18, 4, 10, parchment);
+      dot(20, 18, 4, 10, parchment);
+      dot(11, 21, 10, 7, parchment);
+
+      // Towers + battlements.
+      dot(8, 16, 4, 2, gold);
+      dot(20, 16, 4, 2, gold);
+      dot(11, 19, 10, 2, gold);
+
+      // Door.
+      dot(15, 24, 2, 4, ink);
+
+      // Outline.
+      dot(8, 18, 4, 1, ink);
+      dot(8, 18, 1, 10, ink);
+      dot(11, 21, 10, 1, ink);
+      dot(20, 18, 4, 1, ink);
+      dot(23, 18, 1, 10, ink);
+      dot(11, 27, 13, 1, ink);
+      break;
+    }
+    case "icon-town": {
+      // House.
+      dot(12, 22, 8, 6, parchment);
+      // Roof (stepped).
+      dot(11, 21, 10, 1, coral);
+      dot(12, 20, 8, 1, coral);
+      dot(13, 19, 6, 1, coral);
+      dot(14, 18, 4, 1, coral);
+      // Door.
+      dot(15, 25, 2, 3, ink);
+      // Outline.
+      dot(12, 22, 8, 1, ink);
+      dot(12, 22, 1, 6, ink);
+      dot(19, 22, 1, 6, ink);
+      dot(12, 27, 8, 1, ink);
+      break;
+    }
+    case "icon-dungeon": {
+      // Cave mouth.
+      dot(11, 22, 10, 6, stone);
+      dot(12, 23, 8, 5, ink);
+      dot(13, 24, 6, 4, "#2A2017");
+
+      // "Spikes" above.
+      dot(12, 21, 1, 1, stone);
+      dot(15, 20, 1, 2, stone);
+      dot(18, 21, 1, 1, stone);
+
+      // Outline.
+      dot(11, 22, 10, 1, ink);
+      dot(11, 22, 1, 6, ink);
+      dot(20, 22, 1, 6, ink);
+      dot(11, 27, 10, 1, ink);
+      break;
+    }
+    case "icon-wild": {
+      // Tree canopy.
+      dot(12, 18, 8, 6, grass);
+      dot(11, 19, 10, 4, grass);
+      dot(13, 17, 6, 1, grass);
+      // Trunk.
+      dot(15, 23, 2, 5, ink);
+      // Outline highlights.
+      dot(12, 18, 8, 1, ink);
+      dot(11, 19, 1, 4, ink);
+      dot(20, 19, 1, 4, ink);
+      break;
+    }
+    case "icon-landmark": {
+      // Obelisk + star cap.
+      dot(15, 16, 2, 2, sky);
+      dot(14, 18, 4, 10, parchment);
+      dot(15, 18, 2, 10, gold);
+      // Base.
+      dot(12, 27, 8, 2, parchment);
+      // Outline.
+      dot(14, 18, 4, 1, ink);
+      dot(14, 18, 1, 10, ink);
+      dot(17, 18, 1, 10, ink);
+      dot(12, 27, 8, 1, ink);
+      dot(12, 28, 8, 1, ink);
+      break;
+    }
+  }
+
+  return canvas;
+}
+
 type PixiScene = {
   app: Application;
   world: Container;
   terrainTiles: Container;
+  terrainMacroDecor: Container;
+  terrainDecor: Container;
   baseTerrain: TilingSprite | null;
+  biomeField: Sprite | null;
+  biomeFieldKey: string | null;
+  biomeFieldTexture: Texture | null;
   biomeTextures: Map<string, Texture>;
-  decorationTextures: Map<string, Texture>;
+  macroDecorationTexturesByBiome: Map<string, Texture[]>;
+  decorationTexturesByBiome: Map<string, Texture[]>;
+  macroDecorKey: string | null;
+  macroDecorSprites: Sprite[];
   decorationsByLocationId: Map<
     string,
     {
       sprites: Sprite[];
       radius: number;
       biomeTag: string | null;
+      assetsVersion: number;
     }
   >;
   terrainPatchesByLocationId: Map<
@@ -542,6 +924,8 @@ export function WorldMap({
 
       const worldContainer = new Container();
       const terrainTiles = new Container();
+      const terrainMacroDecor = new Container();
+      const terrainDecor = new Container();
       const terrainGraphics = new Graphics();
       const pathGraphics = new Graphics();
       const poiMarkerGraphics = new Graphics();
@@ -552,6 +936,8 @@ export function WorldMap({
       const agentLabels = new Container();
 
       worldContainer.addChild(terrainTiles);
+      worldContainer.addChild(terrainMacroDecor);
+      worldContainer.addChild(terrainDecor);
       worldContainer.addChild(terrainGraphics);
       worldContainer.addChild(pathGraphics);
       worldContainer.addChild(poiMarkerGraphics);
@@ -566,7 +952,8 @@ export function WorldMap({
       const agentTextures = new Map<AgentSpriteKey, Texture>();
       const poiTextures = new Map<PoiIconKey, Texture>();
       const biomeTextures = new Map<string, Texture>();
-      const decorationTextures = new Map<string, Texture>();
+      const macroDecorationTexturesByBiome = new Map<string, Texture[]>();
+      const decorationTexturesByBiome = new Map<string, Texture[]>();
       const spritesByUsername = new Map<string, Sprite>();
       const poiSpritesByLocationId = new Map<string, Sprite>();
       const locationLabelsById = new Map<string, Text>();
@@ -576,6 +963,7 @@ export function WorldMap({
           sprites: Sprite[];
           radius: number;
           biomeTag: string | null;
+          assetsVersion: number;
         }
       >();
       const terrainPatchesByLocationId = new Map<
@@ -588,28 +976,44 @@ export function WorldMap({
         }
       >();
 
-      for (const tag of ["plains", "forest", "cave", "ruins", "mountain", "snow", "water", "desert"]) {
+      for (const tag of BIOME_TAGS) {
         const canvas = makeBiomeTileCanvas(tag);
         if (!canvas) continue;
         biomeTextures.set(tag, Texture.from(canvas));
       }
 
-      for (const tag of ["plains", "forest", "cave", "ruins", "mountain", "snow", "water", "desert"]) {
+      for (const tag of BIOME_TAGS) {
         const canvas = makeBiomeDecorationCanvas(tag);
         if (!canvas) continue;
-        decorationTextures.set(tag, Texture.from(canvas));
+        decorationTexturesByBiome.set(tag, [Texture.from(canvas)]);
+      }
+
+      for (const key of GENERIC_POI_ICON_KEYS) {
+        const canvas = makeGenericPoiIconCanvas(key);
+        if (!canvas) continue;
+        poiTextures.set(key, Texture.from(canvas));
       }
 
       agentSprites.sortableChildren = true;
       poiSprites.sortableChildren = true;
+      terrainMacroDecor.sortableChildren = true;
+      terrainDecor.sortableChildren = true;
 
       pixi.current = {
         app,
         world: worldContainer,
         terrainTiles,
+        terrainMacroDecor,
+        terrainDecor,
         baseTerrain: null,
+        biomeField: null,
+        biomeFieldKey: null,
+        biomeFieldTexture: null,
         biomeTextures,
-        decorationTextures,
+        macroDecorationTexturesByBiome,
+        decorationTexturesByBiome,
+        macroDecorKey: null,
+        macroDecorSprites: [],
         decorationsByLocationId,
         terrainPatchesByLocationId,
         terrainGraphics,
@@ -639,7 +1043,7 @@ export function WorldMap({
             // Best-effort; fall back to marker circles if assets fail to load.
           }
         }),
-        ...POI_ICON_KEYS.map(async (key) => {
+        ...UNIQUE_POI_ICON_KEYS.map(async (key) => {
           try {
             const texture = (await Assets.load(`/assets/poi/${key}.png`)) as Texture;
             if (cancelled) return;
@@ -647,6 +1051,45 @@ export function WorldMap({
           } catch {
             // Best-effort; keep using procedural markers when missing.
           }
+        }),
+        ...GENERIC_POI_ICON_KEYS.map(async (key) => {
+          try {
+            const texture = (await Assets.load(`/assets/poi/${key}.png`)) as Texture;
+            if (cancelled) return;
+            poiTextures.set(key, texture);
+          } catch {
+            // Best-effort; keep using procedural icon when missing.
+          }
+        }),
+        ...(Object.entries(DECOR_ASSET_KEYS_BY_BIOME) as Array<[BiomeTag, string[]]>).map(async ([tag, keys]) => {
+          const textures: Texture[] = [];
+          for (const key of keys) {
+            try {
+              const texture = (await Assets.load(`/assets/decor/${key}.png`)) as Texture;
+              if (cancelled) return;
+              textures.push(texture);
+            } catch {
+              // Best-effort; keep using procedural biome decorations when missing.
+            }
+          }
+
+          if (cancelled) return;
+          if (textures.length > 0) decorationTexturesByBiome.set(tag, textures);
+        }),
+        ...(Object.entries(MACRO_DECOR_ASSET_KEYS_BY_BIOME) as Array<[BiomeTag, string[]]>).map(async ([tag, keys]) => {
+          const textures: Texture[] = [];
+          for (const key of keys) {
+            try {
+              const texture = (await Assets.load(`/assets/decor/${key}.png`)) as Texture;
+              if (cancelled) return;
+              textures.push(texture);
+            } catch {
+              // Best-effort; macro decor will simply be skipped if assets are missing.
+            }
+          }
+
+          if (cancelled) return;
+          if (textures.length > 0) macroDecorationTexturesByBiome.set(tag, textures);
         })
       ]).then(() => {
         if (cancelled) return;
@@ -745,6 +1188,58 @@ export function WorldMap({
     const terrainWidth = Math.max(1, b.maxX - b.minX + TERRAIN_PADDING_WORLD * 2);
     const terrainHeight = Math.max(1, b.maxY - b.minY + TERRAIN_PADDING_WORLD * 2);
 
+    // Macro biome background so regions read at default zoom.
+    // This is intentionally low-res and scaled with nearest-neighbor to feel like a tilemap.
+    const layoutHash = hashWorldLocationsForBiomeField(world.locations);
+    let fieldPixelSizeWorld = BIOME_FIELD_MIN_PIXEL_SIZE_WORLD;
+    let fieldPixelWidth = Math.max(1, Math.ceil(terrainWidth / fieldPixelSizeWorld));
+    let fieldPixelHeight = Math.max(1, Math.ceil(terrainHeight / fieldPixelSizeWorld));
+    if (fieldPixelWidth > BIOME_FIELD_MAX_DIM_PX || fieldPixelHeight > BIOME_FIELD_MAX_DIM_PX) {
+      const factor = Math.ceil(Math.max(fieldPixelWidth, fieldPixelHeight) / BIOME_FIELD_MAX_DIM_PX);
+      fieldPixelSizeWorld = BIOME_FIELD_MIN_PIXEL_SIZE_WORLD * factor;
+      fieldPixelWidth = Math.max(1, Math.ceil(terrainWidth / fieldPixelSizeWorld));
+      fieldPixelHeight = Math.max(1, Math.ceil(terrainHeight / fieldPixelSizeWorld));
+    }
+
+    const fieldKey = `${layoutHash}:${Math.round(terrainMinX)}:${Math.round(terrainMinY)}:${Math.round(terrainWidth)}:${Math.round(
+      terrainHeight
+    )}:${fieldPixelSizeWorld}`;
+
+    if (scene.biomeFieldKey !== fieldKey) {
+      const canvas = makeBiomeFieldCanvas({
+        locations: world.locations,
+        terrain: { x: terrainMinX, y: terrainMinY, width: terrainWidth, height: terrainHeight },
+        pixelSizeWorld: fieldPixelSizeWorld,
+        pixelWidth: fieldPixelWidth,
+        pixelHeight: fieldPixelHeight
+      });
+
+      if (canvas) {
+        const texture = Texture.from(canvas);
+        const sprite = scene.biomeField ?? new Sprite(texture);
+        if (!scene.biomeField) {
+          sprite.alpha = 1;
+          scene.terrainTiles.addChildAt(sprite, 0);
+          scene.biomeField = sprite;
+        }
+
+        if (sprite.texture !== texture) {
+          sprite.texture = texture;
+        }
+
+        // Prevent leaking render-textures when the field regenerates.
+        if (scene.biomeFieldTexture && scene.biomeFieldTexture !== texture) scene.biomeFieldTexture.destroy(true);
+        scene.biomeFieldTexture = texture;
+        scene.biomeFieldKey = fieldKey;
+      }
+    }
+
+    if (scene.biomeField) {
+      scene.biomeField.position.set(terrainMinX, terrainMinY);
+      scene.biomeField.width = terrainWidth;
+      scene.biomeField.height = terrainHeight;
+    }
+
     const grassTexture = scene.biomeTextures.get("plains") ?? Texture.WHITE;
     const base = scene.baseTerrain ?? new TilingSprite({ texture: grassTexture, width: terrainWidth, height: terrainHeight });
     if (!scene.baseTerrain) {
@@ -752,10 +1247,146 @@ export function WorldMap({
       scene.terrainTiles.addChild(base);
       scene.baseTerrain = base;
     }
+    base.alpha = scene.biomeField ? 0 : 1;
     base.texture = grassTexture;
     base.width = terrainWidth;
     base.height = terrainHeight;
     base.position.set(terrainMinX, terrainMinY);
+
+    // Macro decor clusters (midground) placed throughout biome regions.
+    // Rebuild only when the location layout (biome field key) or loaded assets change.
+    const macroKey = scene.macroDecorationTexturesByBiome.size > 0 ? `${fieldKey}:${assetsVersion}` : null;
+    if (macroKey !== scene.macroDecorKey) {
+      for (const s of scene.macroDecorSprites) {
+        s.parent?.removeChild(s);
+        s.destroy();
+      }
+
+      scene.macroDecorSprites = [];
+      scene.macroDecorKey = macroKey;
+
+      if (macroKey) {
+        const pointsByBiome = new Map<BiomeTag, Array<{ x: number; y: number }>>();
+        for (const tag of BIOME_TAGS) pointsByBiome.set(tag, []);
+
+        const allPoiPoints: Array<{ x: number; y: number }> = [];
+        for (const l of world.locations) {
+          if (typeof l.x !== "number" || typeof l.y !== "number") continue;
+          allPoiPoints.push({ x: l.x, y: l.y });
+          const tag = (BIOME_TAGS as readonly string[]).includes(l.biome_tag ?? "") ? (l.biome_tag as BiomeTag) : "plains";
+          pointsByBiome.get(tag)?.push({ x: l.x, y: l.y });
+        }
+
+        const noiseSeed = createRng("clawcraft:biome-field-noise").int(1, 0x7fffffff);
+        const resolveBiomeTagAt = (worldX: number, worldY: number): BiomeTag => {
+          const px = Math.floor((worldX - terrainMinX) / fieldPixelSizeWorld);
+          const py = Math.floor((worldY - terrainMinY) / fieldPixelSizeWorld);
+          const jitter = 1 + (hash2DToUnitFloat(px, py, noiseSeed) - 0.5) * 0.18;
+
+          let bestTag: BiomeTag = "plains";
+          let bestScore = Number.POSITIVE_INFINITY;
+
+          for (const tag of BIOME_TAGS) {
+            const pts = pointsByBiome.get(tag);
+            if (!pts || pts.length === 0) continue;
+            let best = Number.POSITIVE_INFINITY;
+            for (const p of pts) {
+              const dx = worldX - p.x;
+              const dy = worldY - p.y;
+              const d2 = dx * dx + dy * dy;
+              if (d2 < best) best = d2;
+            }
+
+            const score = best * jitter;
+            if (score < bestScore) {
+              bestScore = score;
+              bestTag = tag;
+            }
+          }
+
+          return bestTag;
+        };
+
+        const minPoiDist2 = 180 * 180;
+        const minMacroDist2 = 240 * 240;
+        const macroPoints: Array<{ x: number; y: number }> = [];
+        const worldMaxX = terrainMinX + terrainWidth;
+        const worldMaxY = terrainMinY + terrainHeight;
+
+        for (const tag of BIOME_TAGS) {
+          const textures = scene.macroDecorationTexturesByBiome.get(tag) ?? null;
+          if (!textures || textures.length === 0) continue;
+
+          const pts = pointsByBiome.get(tag) ?? [];
+          if (pts.length === 0) continue;
+
+          let minX = Number.POSITIVE_INFINITY;
+          let minY = Number.POSITIVE_INFINITY;
+          let maxX = Number.NEGATIVE_INFINITY;
+          let maxY = Number.NEGATIVE_INFINITY;
+          for (const p of pts) {
+            if (p.x < minX) minX = p.x;
+            if (p.y < minY) minY = p.y;
+            if (p.x > maxX) maxX = p.x;
+            if (p.y > maxY) maxY = p.y;
+          }
+
+          const margin = 520;
+          const sampleMinX = clamp(minX - margin, terrainMinX, worldMaxX);
+          const sampleMaxX = clamp(maxX + margin, terrainMinX, worldMaxX);
+          const sampleMinY = clamp(minY - margin, terrainMinY, worldMaxY);
+          const sampleMaxY = clamp(maxY + margin, terrainMinY, worldMaxY);
+          if (sampleMaxX - sampleMinX < 1 || sampleMaxY - sampleMinY < 1) continue;
+
+          const desiredCount = clamp(Math.round(pts.length * 0.65), tag === "cave" ? 2 : 5, 14);
+          const rng = createRng(`clawcraft:macro-decor:${tag}:${macroKey}`);
+          const maxAttempts = desiredCount * 120;
+
+          let accepted = 0;
+          for (let attempt = 0; attempt < maxAttempts && accepted < desiredCount; attempt++) {
+            const x = rng.float(sampleMinX, sampleMaxX);
+            const y = rng.float(sampleMinY, sampleMaxY);
+            if (resolveBiomeTagAt(x, y) !== tag) continue;
+
+            let nearestPoi2 = Number.POSITIVE_INFINITY;
+            for (const p of allPoiPoints) {
+              const dx = x - p.x;
+              const dy = y - p.y;
+              const d2 = dx * dx + dy * dy;
+              if (d2 < nearestPoi2) nearestPoi2 = d2;
+            }
+            if (nearestPoi2 < minPoiDist2) continue;
+
+            let tooClose = false;
+            for (const p of macroPoints) {
+              const dx = x - p.x;
+              const dy = y - p.y;
+              const d2 = dx * dx + dy * dy;
+              if (d2 < minMacroDist2) {
+                tooClose = true;
+                break;
+              }
+            }
+            if (tooClose) continue;
+
+            const sprite = new Sprite(rng.pick(textures));
+            sprite.anchor.set(0.5, 0.5);
+            sprite.alpha = 0.82;
+            sprite.position.set(x, y);
+
+            const s = rng.float(0.26, tag === "forest" ? 0.44 : 0.4);
+            const flip = rng.int(0, 3) === 0;
+            sprite.scale.set(flip ? -s : s, s);
+            sprite.zIndex = sprite.y;
+
+            scene.terrainMacroDecor.addChild(sprite);
+            scene.macroDecorSprites.push(sprite);
+            macroPoints.push({ x, y });
+            accepted++;
+          }
+        }
+      }
+    }
 
     for (const edge of world.connections) {
       const from = locById.get(edge.from_id);
@@ -814,8 +1445,10 @@ export function WorldMap({
         });
       const patchMask = existingPatch?.mask ?? new Graphics();
 
+      // Now that we have a macro biome background, keep POI biome patches subtle.
+      patchSprite.alpha = 0.22;
+
       if (!existingPatch) {
-        patchSprite.alpha = 0.55;
         patchSprite.position.set(patchX, patchY);
         const patchRng = createRng(`clawcraft:terrain-patch:${l.id}`);
         patchSprite.tilePosition.set(patchRng.int(0, BIOME_TILE_SIZE - 1), patchRng.int(0, BIOME_TILE_SIZE - 1));
@@ -855,26 +1488,28 @@ export function WorldMap({
       scene.terrainGraphics.circle(l.x, l.y, Math.round(radius * 0.92)).stroke({ width: 6, color: colorForBiomeTag(biomeTag), alpha: 0.02 });
 
       // Biome decorations (very lightweight stand-in for the future asset overlay pipeline).
-      const decorTexture = scene.decorationTextures.get(biomeTag) ?? scene.decorationTextures.get("plains") ?? null;
-      if (decorTexture) {
+      const decorTextures =
+        scene.decorationTexturesByBiome.get(biomeTag) ?? scene.decorationTexturesByBiome.get("plains") ?? null;
+      if (decorTextures && decorTextures.length > 0) {
         const baseCount =
           biomeTag === "forest"
-            ? 18
+            ? 24
             : biomeTag === "plains"
-              ? 12
+              ? 18
               : biomeTag === "water"
-                ? 8
+                ? 12
                 : biomeTag === "desert"
-                  ? 10
+                  ? 14
                   : biomeTag === "snow"
-                    ? 10
-                    : 14;
+                    ? 14
+                    : 18;
         const typeMultiplier = l.type === "major_city" ? 0.35 : l.type === "town" ? 0.55 : l.type === "landmark" ? 0.7 : 0.85;
         const desiredCount = Math.max(0, Math.round(baseCount * typeMultiplier));
 
         const existingDecor = scene.decorationsByLocationId.get(l.id) ?? null;
         const needsRebuild =
           !existingDecor ||
+          existingDecor.assetsVersion !== assetsVersion ||
           existingDecor.biomeTag !== biomeTag ||
           existingDecor.radius !== radius ||
           existingDecor.sprites.length !== desiredCount;
@@ -888,25 +1523,28 @@ export function WorldMap({
           const sprites: Sprite[] = [];
           const decorRng = createRng(`clawcraft:decorations:${l.id}`);
           for (let i = 0; i < desiredCount; i++) {
-            const sprite = new Sprite(decorTexture);
+            const sprite = new Sprite(decorRng.pick(decorTextures));
             sprite.anchor.set(0.5, 0.5);
             sprite.alpha = 0.9;
 
             const angle = decorRng.float(0, Math.PI * 2);
             const dist = decorRng.float(radius * 0.45, radius * 0.98);
             sprite.position.set(l.x + Math.cos(angle) * dist, l.y + Math.sin(angle) * dist);
-            sprite.scale.set(decorRng.float(0.55, 0.9));
+            const s = decorRng.float(0.45, 0.8);
+            const flip = decorRng.int(0, 5) === 0;
+            sprite.scale.set(flip ? -s : s, s);
+            sprite.zIndex = sprite.y;
 
-            scene.terrainTiles.addChild(sprite);
+            scene.terrainDecor.addChild(sprite);
             sprites.push(sprite);
           }
-          scene.decorationsByLocationId.set(l.id, { sprites, radius, biomeTag });
+          scene.decorationsByLocationId.set(l.id, { sprites, radius, biomeTag, assetsVersion });
         }
       }
 
       scene.poiMarkerGraphics.circle(l.x, l.y + 10, 12).fill({ color: 0x000000, alpha: 0.1 });
 
-      const poiKey = slugifyPoiName(l.name) as PoiIconKey;
+      const poiKey = iconKeyForLocation(l);
       const texture = scene.poiTextures.get(poiKey);
 
       if (texture) {
@@ -1007,15 +1645,15 @@ export function WorldMap({
       const isActive = Boolean(activePoiId && activePoiId === l.id);
       const showAtScale =
         l.type === "major_city" || l.type === "landmark"
-          ? 0.9
+          ? 0.35
           : l.type === "town"
-            ? 1.15
-            : 1.45;
+            ? 0.95
+            : 1.25;
       const isVisible = isActive || camera.scale >= showAtScale;
       label.visible = isVisible;
       if (isVisible) anyVisible = true;
 
-      const poiKey = slugifyPoiName(l.name) as PoiIconKey;
+      const poiKey = iconKeyForLocation(l);
       const hasIcon = Boolean(scene.poiTextures.get(poiKey));
       const iconRadiusWorld = hasIcon ? POI_ICON_SIZE_WORLD / 2 : 7;
 

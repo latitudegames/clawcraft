@@ -20,6 +20,7 @@ I must reference these for the authoritative plan/spec:
 - `docs/plans/2026-02-06-wave-4-terrain-richness-log.md` — implementation log for procedural terrain richness
 - `docs/plans/2026-02-06-wave-5-bubble-declutter-log.md` — implementation log for bubble declutter at hotspots
 - `docs/plans/2026-02-05-spectator-parity-qa-checklist.md` — parity QA checklist (automated + manual pass tracking)
+- `docs/plans/2026-02-06-world-expansion-plan.md` — large world scaling plan (>=100 POIs, biomes, map readability)
 
 Execution-level translation of those docs:
 - `docs/CODEX_ROADMAP.md` — repo map + build order + dev-harness plan
@@ -44,6 +45,9 @@ Execution-level translation of those docs:
 - Dev/test utilities:
   - `npm test` (compiles Node test subset + runs `node --test`)
   - `npm run dev:seed` (idempotent seed: locations, connections, items)
+    - Defaults to the large world dataset in `data/world/world-v1-large.json`
+    - Use `SEED_WORLD=small` for a tiny 5-POI world
+  - `npm run dev:world:gen` (regenerate deterministic world datasets in `data/world/`)
   - `npm run dev:smoke` (API smoke runner; requires local server + DB)
     - Optional: `SMOKE_PARTY=1` (or `--party`) exercises party queueing/formation
   - `npm run dev:llm` (OpenRouter smoke; requires `OPENROUTER_API_KEY`)
