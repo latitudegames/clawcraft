@@ -332,8 +332,12 @@ function colorForBiomeTag(tag: string | null | undefined): number {
   }
 }
 
-const POI_ICON_KEYS = ["kings-landing", "whispering-woods", "goblin-cave", "ancient-library", "dragon-peak"] as const;
-type PoiIconKey = (typeof POI_ICON_KEYS)[number];
+const UNIQUE_POI_ICON_KEYS = ["kings-landing", "whispering-woods", "goblin-cave", "ancient-library", "dragon-peak"] as const;
+const UNIQUE_POI_ICON_KEY_SET = new Set<string>(UNIQUE_POI_ICON_KEYS);
+
+const GENERIC_POI_ICON_KEYS = ["icon-major-city", "icon-town", "icon-dungeon", "icon-wild", "icon-landmark"] as const;
+
+type PoiIconKey = (typeof UNIQUE_POI_ICON_KEYS)[number] | (typeof GENERIC_POI_ICON_KEYS)[number];
 
 function slugifyPoiName(name: string): string {
   return name
@@ -341,6 +345,147 @@ function slugifyPoiName(name: string): string {
     .replace(/['’]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)+/g, "");
+}
+
+function iconKeyForLocation(loc: { name: string; type: string }): PoiIconKey {
+  const slug = slugifyPoiName(loc.name);
+  if (UNIQUE_POI_ICON_KEY_SET.has(slug)) return slug as PoiIconKey;
+
+  switch (loc.type) {
+    case "major_city":
+      return "icon-major-city";
+    case "town":
+      return "icon-town";
+    case "dungeon":
+      return "icon-dungeon";
+    case "wild":
+      return "icon-wild";
+    case "landmark":
+      return "icon-landmark";
+    default:
+      return "icon-town";
+  }
+}
+
+function makeGenericPoiIconCanvas(key: (typeof GENERIC_POI_ICON_KEYS)[number]): HTMLCanvasElement | null {
+  if (typeof document === "undefined") return null;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 128;
+  canvas.height = 128;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  ctx.clearRect(0, 0, 128, 128);
+
+  // 32x32 "pixel grid" scaled up 4x for crisp nearest-neighbor rendering.
+  const p = 4;
+  const dot = (x: number, y: number, w: number, h: number, color: string) => {
+    ctx.fillStyle = color;
+    ctx.fillRect(x * p, y * p, w * p, h * p);
+  };
+
+  const ink = "#4A3728";
+  const parchment = "#F5E6C8";
+  const gold = "#FFD859";
+  const coral = "#FF6B6B";
+  const sky = "#87CEEB";
+  const grass = "#7EC850";
+  const stone = "#8B9BB4";
+
+  // Shared subtle drop-shadow base.
+  dot(6, 26, 20, 2, "rgba(0,0,0,0.12)");
+
+  switch (key) {
+    case "icon-major-city": {
+      // Castle-ish silhouette.
+      dot(8, 18, 4, 10, parchment);
+      dot(20, 18, 4, 10, parchment);
+      dot(11, 21, 10, 7, parchment);
+
+      // Towers + battlements.
+      dot(8, 16, 4, 2, gold);
+      dot(20, 16, 4, 2, gold);
+      dot(11, 19, 10, 2, gold);
+
+      // Door.
+      dot(15, 24, 2, 4, ink);
+
+      // Outline.
+      dot(8, 18, 4, 1, ink);
+      dot(8, 18, 1, 10, ink);
+      dot(11, 21, 10, 1, ink);
+      dot(20, 18, 4, 1, ink);
+      dot(23, 18, 1, 10, ink);
+      dot(11, 27, 13, 1, ink);
+      break;
+    }
+    case "icon-town": {
+      // House.
+      dot(12, 22, 8, 6, parchment);
+      // Roof (stepped).
+      dot(11, 21, 10, 1, coral);
+      dot(12, 20, 8, 1, coral);
+      dot(13, 19, 6, 1, coral);
+      dot(14, 18, 4, 1, coral);
+      // Door.
+      dot(15, 25, 2, 3, ink);
+      // Outline.
+      dot(12, 22, 8, 1, ink);
+      dot(12, 22, 1, 6, ink);
+      dot(19, 22, 1, 6, ink);
+      dot(12, 27, 8, 1, ink);
+      break;
+    }
+    case "icon-dungeon": {
+      // Cave mouth.
+      dot(11, 22, 10, 6, stone);
+      dot(12, 23, 8, 5, ink);
+      dot(13, 24, 6, 4, "#2A2017");
+
+      // "Spikes" above.
+      dot(12, 21, 1, 1, stone);
+      dot(15, 20, 1, 2, stone);
+      dot(18, 21, 1, 1, stone);
+
+      // Outline.
+      dot(11, 22, 10, 1, ink);
+      dot(11, 22, 1, 6, ink);
+      dot(20, 22, 1, 6, ink);
+      dot(11, 27, 10, 1, ink);
+      break;
+    }
+    case "icon-wild": {
+      // Tree canopy.
+      dot(12, 18, 8, 6, grass);
+      dot(11, 19, 10, 4, grass);
+      dot(13, 17, 6, 1, grass);
+      // Trunk.
+      dot(15, 23, 2, 5, ink);
+      // Outline highlights.
+      dot(12, 18, 8, 1, ink);
+      dot(11, 19, 1, 4, ink);
+      dot(20, 19, 1, 4, ink);
+      break;
+    }
+    case "icon-landmark": {
+      // Obelisk + star cap.
+      dot(15, 16, 2, 2, sky);
+      dot(14, 18, 4, 10, parchment);
+      dot(15, 18, 2, 10, gold);
+      // Base.
+      dot(12, 27, 8, 2, parchment);
+      // Outline.
+      dot(14, 18, 4, 1, ink);
+      dot(14, 18, 1, 10, ink);
+      dot(17, 18, 1, 10, ink);
+      dot(12, 27, 8, 1, ink);
+      dot(12, 28, 8, 1, ink);
+      break;
+    }
+  }
+
+  return canvas;
 }
 
 type PixiScene = {
@@ -600,6 +745,12 @@ export function WorldMap({
         decorationTextures.set(tag, Texture.from(canvas));
       }
 
+      for (const key of GENERIC_POI_ICON_KEYS) {
+        const canvas = makeGenericPoiIconCanvas(key);
+        if (!canvas) continue;
+        poiTextures.set(key, Texture.from(canvas));
+      }
+
       agentSprites.sortableChildren = true;
       poiSprites.sortableChildren = true;
 
@@ -639,7 +790,7 @@ export function WorldMap({
             // Best-effort; fall back to marker circles if assets fail to load.
           }
         }),
-        ...POI_ICON_KEYS.map(async (key) => {
+        ...UNIQUE_POI_ICON_KEYS.map(async (key) => {
           try {
             const texture = (await Assets.load(`/assets/poi/${key}.png`)) as Texture;
             if (cancelled) return;
@@ -906,7 +1057,7 @@ export function WorldMap({
 
       scene.poiMarkerGraphics.circle(l.x, l.y + 10, 12).fill({ color: 0x000000, alpha: 0.1 });
 
-      const poiKey = slugifyPoiName(l.name) as PoiIconKey;
+      const poiKey = iconKeyForLocation(l);
       const texture = scene.poiTextures.get(poiKey);
 
       if (texture) {
@@ -1007,15 +1158,15 @@ export function WorldMap({
       const isActive = Boolean(activePoiId && activePoiId === l.id);
       const showAtScale =
         l.type === "major_city" || l.type === "landmark"
-          ? 0.9
+          ? 0.5
           : l.type === "town"
-            ? 1.15
-            : 1.45;
+            ? 0.95
+            : 1.25;
       const isVisible = isActive || camera.scale >= showAtScale;
       label.visible = isVisible;
       if (isVisible) anyVisible = true;
 
-      const poiKey = slugifyPoiName(l.name) as PoiIconKey;
+      const poiKey = iconKeyForLocation(l);
       const hasIcon = Boolean(scene.poiTextures.get(poiKey));
       const iconRadiusWorld = hasIcon ? POI_ICON_SIZE_WORLD / 2 : 7;
 

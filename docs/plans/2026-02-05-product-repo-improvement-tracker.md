@@ -26,6 +26,7 @@ If conflicts appear, update this tracker with the decision and link the doc chan
 | WS-03 | Map readability + party visualization | Codex | In progress | Party and bubble readability at multiple zoom levels |
 | WS-04 | Motion and interaction polish | Codex | In progress | Modal/panel/tab transitions match spec timing |
 | WS-05 | Verification and regression guardrails | Codex | In progress | Lint/typecheck/tests + smoke remain green |
+| WS-06 | World expansion (POIs/biomes/content) | Codex | In progress | >=100 POIs across biomes; spectator map remains readable |
 
 ## Milestone Board
 
@@ -76,6 +77,14 @@ If conflicts appear, update this tracker with the decision and link the doc chan
 - [ ] Performance pass for map responsiveness and network cadence
 - [x] World-state perf harness added and baseline recorded (`npm run dev:perf:world-state`)
 - [x] Dev-only synthetic load harness added (`/api/world-state?synth_agents=...`) + headless render perf runner (`npm run dev:perf:map-render`)
+
+### M6: World Expansion (Large World Content Pass)
+- [x] Deterministic world generator + committed world datasets (`scripts/dev/generate-world.mjs`, `data/world/*`)
+- [x] Seed supports `SEED_WORLD=small|large` (default large)
+- [x] Generic POI icons per `LocationType` so every POI has an icon
+- [ ] Map readability pass under 100+ POIs (label thresholds + icon sizing + road density)
+- [ ] Expand POI set toward “~100 predefined locations” quality (naming, descriptions, regional flavor)
+- [ ] Begin replacing procedural overlays with real transparent PNG overlays per asset pipeline doc
 
 ## Decision Log
 

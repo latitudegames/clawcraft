@@ -1,62 +1,27 @@
 import { PrismaClient } from "@prisma/client";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const prisma = new PrismaClient();
 
-const LOCATIONS = [
-  {
-    name: "King's Landing",
-    description: "A bustling capital where new adventurers gather.",
-    type: "major_city",
-    biomeTag: "plains",
-    population: 250,
-    x: 400,
-    y: 400
-  },
-  {
-    name: "Whispering Woods",
-    description: "A dense forest of half-heard rumors and hidden paths.",
-    type: "wild",
-    biomeTag: "forest",
-    population: 15,
-    x: 160,
-    y: 560
-  },
-  {
-    name: "Goblin Cave",
-    description: "A cramped tunnel network crawling with opportunistic goblins.",
-    type: "dungeon",
-    biomeTag: "cave",
-    population: 0,
-    x: 640,
-    y: 560
-  },
-  {
-    name: "Ancient Library",
-    description: "Ruins of a once-great archive, its stacks reclaimed by moss.",
-    type: "landmark",
-    biomeTag: "ruins",
-    population: 0,
-    x: 240,
-    y: 160
-  },
-  {
-    name: "Dragon Peak",
-    description: "A jagged summit where the air tastes like lightning.",
-    type: "landmark",
-    biomeTag: "mountain",
-    population: 0,
-    x: 880,
-    y: 160
-  }
-];
+async function loadWorldData() {
+  const seedWorld = (process.env.SEED_WORLD ?? "large").toLowerCase();
+  const allowed = new Set(["small", "large"]);
+  const variant = allowed.has(seedWorld) ? seedWorld : "large";
 
-const CONNECTIONS = [
-  ["King's Landing", "Whispering Woods", 3],
-  ["King's Landing", "Goblin Cave", 2],
-  ["King's Landing", "Ancient Library", 4],
-  ["Whispering Woods", "Ancient Library", 2],
-  ["Goblin Cave", "Dragon Peak", 6]
-];
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  const worldPath = path.resolve(__dirname, "../../data/world", `world-v1-${variant}.json`);
+
+  const raw = await fs.readFile(worldPath, "utf8");
+  const json = JSON.parse(raw);
+  const locations = Array.isArray(json?.locations) ? json.locations : [];
+  const connections = Array.isArray(json?.connections) ? json.connections : [];
+
+  if (locations.length === 0) throw new Error(`No locations found in world data: ${worldPath}`);
+  return { variant, worldPath, locations, connections };
+}
 
 const ITEMS = [
   {
@@ -94,24 +59,32 @@ const ITEMS = [
 ];
 
 async function upsertLocations() {
-  console.log("Seeding locations…");
-  for (const loc of LOCATIONS) {
+  const world = await loadWorldData();
+  console.log(`Seeding locations (${world.variant})…`);
+  console.log(`World file: ${world.worldPath}`);
+  for (const loc of world.locations) {
     await prisma.location.upsert({
       where: { name: loc.name },
       create: loc,
       update: loc
     });
   }
+
+  return world;
 }
 
-async function upsertConnections() {
+async function upsertConnections(world) {
   console.log("Seeding connections…");
   const locations = await prisma.location.findMany({
-    where: { name: { in: LOCATIONS.map((l) => l.name) } }
+    where: { name: { in: world.locations.map((l) => l.name) } }
   });
   const byName = new Map(locations.map((l) => [l.name, l]));
 
-  for (const [fromName, toName, distance] of CONNECTIONS) {
+  for (const edge of world.connections) {
+    const fromName = edge.from;
+    const toName = edge.to;
+    const distance = edge.distance;
+
     const from = byName.get(fromName);
     const to = byName.get(toName);
     if (!from || !to) throw new Error(`Missing location for connection ${fromName} -> ${toName}`);
@@ -141,8 +114,8 @@ async function upsertItems() {
 }
 
 async function main() {
-  await upsertLocations();
-  await upsertConnections();
+  const world = await upsertLocations();
+  await upsertConnections(world);
   await upsertItems();
   console.log("Seed complete.");
 }

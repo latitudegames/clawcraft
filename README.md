@@ -27,6 +27,9 @@ Then open `http://localhost:3000`.
 ## Useful scripts
 
 - `npm run dev:seed` — idempotent seed (locations, connections, items)
+  - Default seeds the large world (`data/world/world-v1-large.json`).
+  - Use `SEED_WORLD=small npm run dev:seed` for a tiny 5-POI world.
+- `npm run dev:world:gen` — regenerate deterministic world datasets in `data/world/`
 - `npm run dev:demo -- --party` — creates demo agents + starts quests
 - `npm run dev:smoke [--party] [--guild]` — API smoke runner against `BASE_URL` (default `http://localhost:3000`)
 - `npm run dev:llm` — OpenRouter smoke test (requires `OPENROUTER_API_KEY`)

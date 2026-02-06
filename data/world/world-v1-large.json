@@ -1,0 +1,1859 @@
+{
+  "locations": [
+    {
+      "name": "King's Landing",
+      "description": "King's Landing is a bustling hub of trade and rumors, set amid sunlit meadows and warm farm roads.",
+      "type": "major_city",
+      "biomeTag": "plains",
+      "population": 240,
+      "x": 1200,
+      "y": 900
+    },
+    {
+      "name": "Whispering Woods",
+      "description": "Whispering Woods is untamed country where courage matters and shadowed pines and soft moss underfoot.",
+      "type": "wild",
+      "biomeTag": "forest",
+      "population": 12,
+      "x": 780,
+      "y": 1100
+    },
+    {
+      "name": "Goblin Cave",
+      "description": "Goblin Cave is a dangerous place whispered about in taverns, carved into echoing tunnels and glittering seams of ore.",
+      "type": "dungeon",
+      "biomeTag": "cave",
+      "population": 0,
+      "x": 1500,
+      "y": 1020
+    },
+    {
+      "name": "Ancient Library",
+      "description": "Ancient Library is a famed landmark that draws adventurers, tied to mossy stonework and half-forgotten halls.",
+      "type": "landmark",
+      "biomeTag": "ruins",
+      "population": 0,
+      "x": 840,
+      "y": 320
+    },
+    {
+      "name": "Dragon Peak",
+      "description": "Dragon Peak is a famed landmark that draws adventurers, tied to jagged cliffs and stormy ridgelines.",
+      "type": "landmark",
+      "biomeTag": "mountain",
+      "population": 0,
+      "x": 2140,
+      "y": 260
+    },
+    {
+      "name": "Demon King's Castle",
+      "description": "A black-stone fortress that looms over the range. No one agrees on whether it is abandoned.",
+      "type": "landmark",
+      "biomeTag": "mountain",
+      "population": 0,
+      "x": 2280,
+      "y": 520
+    },
+    {
+      "name": "Sunken Temple",
+      "description": "Sunken Temple is a dangerous place whispered about in taverns, carved into salt air, tidal coves, and distant bells.",
+      "type": "dungeon",
+      "biomeTag": "water",
+      "population": 0,
+      "x": 2140,
+      "y": 1540
+    },
+    {
+      "name": "Oak Gate",
+      "description": "Oak Gate is a cozy stop for travelers, known for friendly faces and sunlit meadows and warm farm roads.",
+      "type": "town",
+      "biomeTag": "plains",
+      "population": 77,
+      "x": 1102,
+      "y": 921
+    },
+    {
+      "name": "Honey Vale",
+      "description": "Honey Vale is a cozy stop for travelers, known for friendly faces and sunlit meadows and warm farm roads.",
+      "type": "town",
+      "biomeTag": "plains",
+      "population": 65,
+      "x": 999,
+      "y": 922
+    },
+    {
+      "name": "Meadow Gate",
+      "description": "Meadow Gate is a cozy stop for travelers, known for friendly faces and sunlit meadows and warm farm roads.",
+      "type": "town",
+      "biomeTag": "plains",
+      "population": 101,
+      "x": 834,
+      "y": 764
+    },
+    {
+      "name": "Cider Hearth",
+      "description": "Cider Hearth is a cozy stop for travelers, known for friendly faces and sunlit meadows and warm farm roads.",
+      "type": "town",
+      "biomeTag": "plains",
+      "population": 97,
+      "x": 862,
+      "y": 1136
+    },
+    {
+      "name": "Oak Spring",
+      "description": "Oak Spring is a cozy stop for travelers, known for friendly faces and sunlit meadows and warm farm roads.",
+      "type": "town",
+      "biomeTag": "plains",
+      "population": 87,
+      "x": 1205,
+      "y": 519
+    },
+    {
+      "name": "Lark Vale",
+      "description": "Lark Vale is a cozy stop for travelers, known for friendly faces and sunlit meadows and warm farm roads.",
+      "type": "town",
+      "biomeTag": "plains",
+      "population": 81,
+      "x": 1277,
+      "y": 1192
+    },
+    {
+      "name": "Sun Vale",
+      "description": "Sun Vale is a cozy stop for travelers, known for friendly faces and sunlit meadows and warm farm roads.",
+      "type": "town",
+      "biomeTag": "plains",
+      "population": 52,
+      "x": 1519,
+      "y": 939
+    },
+    {
+      "name": "Thorny Hollow",
+      "description": "Thorny Hollow is untamed country where courage matters and sunlit meadows and warm farm roads.",
+      "type": "wild",
+      "biomeTag": "plains",
+      "population": 14,
+      "x": 1466,
+      "y": 956
+    },
+    {
+      "name": "Golden Glade",
+      "description": "Golden Glade is untamed country where courage matters and sunlit meadows and warm farm roads.",
+      "type": "wild",
+      "biomeTag": "plains",
+      "population": 21,
+      "x": 1358,
+      "y": 591
+    },
+    {
+      "name": "Breezy Hollow",
+      "description": "Breezy Hollow is untamed country where courage matters and sunlit meadows and warm farm roads.",
+      "type": "wild",
+      "biomeTag": "plains",
+      "population": 17,
+      "x": 865,
+      "y": 1035
+    },
+    {
+      "name": "Bandit Hideout",
+      "description": "Bandit Hideout is a dangerous place whispered about in taverns, carved into sunlit meadows and warm farm roads.",
+      "type": "dungeon",
+      "biomeTag": "plains",
+      "population": 0,
+      "x": 1248,
+      "y": 865
+    },
+    {
+      "name": "Hollow Warren",
+      "description": "Hollow Warren is a dangerous place whispered about in taverns, carved into sunlit meadows and warm farm roads.",
+      "type": "dungeon",
+      "biomeTag": "plains",
+      "population": 0,
+      "x": 1121,
+      "y": 1112
+    },
+    {
+      "name": "Old Tunnels",
+      "description": "Old Tunnels is a dangerous place whispered about in taverns, carved into sunlit meadows and warm farm roads.",
+      "type": "dungeon",
+      "biomeTag": "plains",
+      "population": 0,
+      "x": 1453,
+      "y": 1138
+    },
+    {
+      "name": "Old Watchtower",
+      "description": "Old Watchtower is a famed landmark that draws adventurers, tied to sunlit meadows and warm farm roads.",
+      "type": "landmark",
+      "biomeTag": "plains",
+      "population": 0,
+      "x": 926,
+      "y": 643
+    },
+    {
+      "name": "Sunlit Monastery",
+      "description": "Sunlit Monastery is a famed landmark that draws adventurers, tied to sunlit meadows and warm farm roads.",
+      "type": "landmark",
+      "biomeTag": "plains",
+      "population": 0,
+      "x": 1563,
+      "y": 976
+    },
+    {
+      "name": "Woodcrest",
+      "description": "Woodcrest is a bustling hub of trade and rumors, set amid shadowed pines and soft moss underfoot.",
+      "type": "major_city",
+      "biomeTag": "forest",
+      "population": 274,
+      "x": 576,
+      "y": 838
+    },
+    {
+      "name": "Hollow Vale",
+      "description": "Hollow Vale is a cozy stop for travelers, known for friendly faces and shadowed pines and soft moss underfoot.",
+      "type": "town",
+      "biomeTag": "forest",
+      "population": 27,
+      "x": 336,
+      "y": 1386
+    },
+    {
+      "name": "Fern Bridge",
+      "description": "Fern Bridge is a cozy stop for travelers, known for friendly faces and shadowed pines and soft moss underfoot.",
+      "type": "town",
+      "biomeTag": "forest",
+      "population": 93,
+      "x": 280,
+      "y": 1187
+    },
+    {
+      "name": "Whisper Mill",
+      "description": "Whisper Mill is a cozy stop for travelers, known for friendly faces and shadowed pines and soft moss underfoot.",
+      "type": "town",
+      "biomeTag": "forest",
+      "population": 56,
+      "x": 540,
+      "y": 1070
+    },
+    {
+      "name": "Shade Glen",
+      "description": "Shade Glen is a cozy stop for travelers, known for friendly faces and shadowed pines and soft moss underfoot.",
+      "type": "town",
+      "biomeTag": "forest",
+      "population": 23,
+      "x": 874,
+      "y": 1018
+    },
+    {
+      "name": "Fox Hollow",
+      "description": "Fox Hollow is a cozy stop for travelers, known for friendly faces and shadowed pines and soft moss underfoot.",
+      "type": "town",
+      "biomeTag": "forest",
+      "population": 47,
+      "x": 642,
+      "y": 993
+    },
+    {
+      "name": "Shade Watch",
+      "description": "Shade Watch is a cozy stop for travelers, known for friendly faces and shadowed pines and soft moss underfoot.",
+      "type": "town",
+      "biomeTag": "forest",
+      "population": 32,
+      "x": 587,
+      "y": 1409
+    },
+    {
+      "name": "Quiet Woods",
+      "description": "Quiet Woods is untamed country where courage matters and shadowed pines and soft moss underfoot.",
+      "type": "wild",
+      "biomeTag": "forest",
+      "population": 7,
+      "x": 175,
+      "y": 1202
+    },
+    {
+      "name": "Shadowed Marsh",
+      "description": "Shadowed Marsh is untamed country where courage matters and shadowed pines and soft moss underfoot.",
+      "type": "wild",
+      "biomeTag": "forest",
+      "population": 11,
+      "x": 194,
+      "y": 1209
+    },
+    {
+      "name": "Fae Hollow",
+      "description": "Fae Hollow is untamed country where courage matters and shadowed pines and soft moss underfoot.",
+      "type": "wild",
+      "biomeTag": "forest",
+      "population": 12,
+      "x": 487,
+      "y": 1230
+    },
+    {
+      "name": "Creeping Grotto",
+      "description": "Creeping Grotto is a dangerous place whispered about in taverns, carved into shadowed pines and soft moss underfoot.",
+      "type": "dungeon",
+      "biomeTag": "forest",
+      "population": 0,
+      "x": 633,
+      "y": 1168
+    },
+    {
+      "name": "Moon Grotto",
+      "description": "Moon Grotto is a dangerous place whispered about in taverns, carved into shadowed pines and soft moss underfoot.",
+      "type": "dungeon",
+      "biomeTag": "forest",
+      "population": 0,
+      "x": 710,
+      "y": 1293
+    },
+    {
+      "name": "Goblin Cave 2",
+      "description": "Goblin Cave 2 is a dangerous place whispered about in taverns, carved into echoing tunnels and glittering seams of ore.",
+      "type": "dungeon",
+      "biomeTag": "cave",
+      "population": 0,
+      "x": 358,
+      "y": 691
+    },
+    {
+      "name": "Spider Den",
+      "description": "Spider Den is a dangerous place whispered about in taverns, carved into echoing tunnels and glittering seams of ore.",
+      "type": "dungeon",
+      "biomeTag": "cave",
+      "population": 0,
+      "x": 471,
+      "y": 1384
+    },
+    {
+      "name": "Stag Bridge",
+      "description": "Stag Bridge is a famed landmark that draws adventurers, tied to shadowed pines and soft moss underfoot.",
+      "type": "landmark",
+      "biomeTag": "forest",
+      "population": 0,
+      "x": 483,
+      "y": 901
+    },
+    {
+      "name": "Whispering Tree",
+      "description": "Whispering Tree is a famed landmark that draws adventurers, tied to shadowed pines and soft moss underfoot.",
+      "type": "landmark",
+      "biomeTag": "forest",
+      "population": 0,
+      "x": 247,
+      "y": 713
+    },
+    {
+      "name": "Sandport",
+      "description": "Sandport is a bustling hub of trade and rumors, set amid saffron dunes and mirage-bright horizons.",
+      "type": "major_city",
+      "biomeTag": "desert",
+      "population": 211,
+      "x": 1033,
+      "y": 1533
+    },
+    {
+      "name": "Spice Bazaar",
+      "description": "Spice Bazaar is a cozy stop for travelers, known for friendly faces and saffron dunes and mirage-bright horizons.",
+      "type": "town",
+      "biomeTag": "desert",
+      "population": 88,
+      "x": 1516,
+      "y": 1515
+    },
+    {
+      "name": "Oasis Bazaar",
+      "description": "Oasis Bazaar is a cozy stop for travelers, known for friendly faces and saffron dunes and mirage-bright horizons.",
+      "type": "town",
+      "biomeTag": "desert",
+      "population": 40,
+      "x": 1356,
+      "y": 1904
+    },
+    {
+      "name": "Cinder Market",
+      "description": "Cinder Market is a cozy stop for travelers, known for friendly faces and saffron dunes and mirage-bright horizons.",
+      "type": "town",
+      "biomeTag": "desert",
+      "population": 68,
+      "x": 942,
+      "y": 1285
+    },
+    {
+      "name": "Cinder Camp",
+      "description": "Cinder Camp is a cozy stop for travelers, known for friendly faces and saffron dunes and mirage-bright horizons.",
+      "type": "town",
+      "biomeTag": "desert",
+      "population": 102,
+      "x": 1011,
+      "y": 1446
+    },
+    {
+      "name": "Cinder Wells",
+      "description": "Cinder Wells is a cozy stop for travelers, known for friendly faces and saffron dunes and mirage-bright horizons.",
+      "type": "town",
+      "biomeTag": "desert",
+      "population": 26,
+      "x": 939,
+      "y": 1587
+    },
+    {
+      "name": "Burning Badlands",
+      "description": "Burning Badlands is untamed country where courage matters and saffron dunes and mirage-bright horizons.",
+      "type": "wild",
+      "biomeTag": "desert",
+      "population": 21,
+      "x": 810,
+      "y": 1401
+    },
+    {
+      "name": "Saffron Saltpan",
+      "description": "Saffron Saltpan is untamed country where courage matters and saffron dunes and mirage-bright horizons.",
+      "type": "wild",
+      "biomeTag": "desert",
+      "population": 12,
+      "x": 908,
+      "y": 1336
+    },
+    {
+      "name": "Glass Badlands",
+      "description": "Glass Badlands is untamed country where courage matters and saffron dunes and mirage-bright horizons.",
+      "type": "wild",
+      "biomeTag": "desert",
+      "population": 17,
+      "x": 1287,
+      "y": 1743
+    },
+    {
+      "name": "Sunken Ruins",
+      "description": "Sunken Ruins is a dangerous place whispered about in taverns, carved into saffron dunes and mirage-bright horizons.",
+      "type": "dungeon",
+      "biomeTag": "desert",
+      "population": 0,
+      "x": 1289,
+      "y": 1374
+    },
+    {
+      "name": "Hollow Crypt",
+      "description": "Hollow Crypt is a dangerous place whispered about in taverns, carved into saffron dunes and mirage-bright horizons.",
+      "type": "dungeon",
+      "biomeTag": "desert",
+      "population": 0,
+      "x": 1108,
+      "y": 1258
+    },
+    {
+      "name": "Hollow Tomb",
+      "description": "Hollow Tomb is a dangerous place whispered about in taverns, carved into saffron dunes and mirage-bright horizons.",
+      "type": "dungeon",
+      "biomeTag": "desert",
+      "population": 0,
+      "x": 1141,
+      "y": 1185
+    },
+    {
+      "name": "Saffron Monument",
+      "description": "Saffron Monument is a famed landmark that draws adventurers, tied to saffron dunes and mirage-bright horizons.",
+      "type": "landmark",
+      "biomeTag": "desert",
+      "population": 0,
+      "x": 1378,
+      "y": 1544
+    },
+    {
+      "name": "Wind Lighthouse",
+      "description": "Wind Lighthouse is a famed landmark that draws adventurers, tied to saffron dunes and mirage-bright horizons.",
+      "type": "landmark",
+      "biomeTag": "desert",
+      "population": 0,
+      "x": 1224,
+      "y": 1571
+    },
+    {
+      "name": "Frostgate",
+      "description": "Frostgate is a bustling hub of trade and rumors, set amid frosted passes and aurora-lit nights.",
+      "type": "major_city",
+      "biomeTag": "snow",
+      "population": 191,
+      "x": 1045,
+      "y": 625
+    },
+    {
+      "name": "Snow Cairn",
+      "description": "Snow Cairn is a cozy stop for travelers, known for friendly faces and frosted passes and aurora-lit nights.",
+      "type": "town",
+      "biomeTag": "snow",
+      "population": 93,
+      "x": 859,
+      "y": 183
+    },
+    {
+      "name": "Glacier Reach",
+      "description": "Glacier Reach is a cozy stop for travelers, known for friendly faces and frosted passes and aurora-lit nights.",
+      "type": "town",
+      "biomeTag": "snow",
+      "population": 108,
+      "x": 1101,
+      "y": 299
+    },
+    {
+      "name": "Frost Crossing",
+      "description": "Frost Crossing is a cozy stop for travelers, known for friendly faces and frosted passes and aurora-lit nights.",
+      "type": "town",
+      "biomeTag": "snow",
+      "population": 80,
+      "x": 1079,
+      "y": 306
+    },
+    {
+      "name": "Winter Pass",
+      "description": "Winter Pass is a cozy stop for travelers, known for friendly faces and frosted passes and aurora-lit nights.",
+      "type": "town",
+      "biomeTag": "snow",
+      "population": 47,
+      "x": 1487,
+      "y": 11
+    },
+    {
+      "name": "Silver Pass",
+      "description": "Silver Pass is a cozy stop for travelers, known for friendly faces and frosted passes and aurora-lit nights.",
+      "type": "town",
+      "biomeTag": "snow",
+      "population": 45,
+      "x": 1504,
+      "y": 210
+    },
+    {
+      "name": "Aurora Ridge",
+      "description": "Aurora Ridge is untamed country where courage matters and frosted passes and aurora-lit nights.",
+      "type": "wild",
+      "biomeTag": "snow",
+      "population": 7,
+      "x": 1336,
+      "y": 569
+    },
+    {
+      "name": "Aurora Tundra",
+      "description": "Aurora Tundra is untamed country where courage matters and frosted passes and aurora-lit nights.",
+      "type": "wild",
+      "biomeTag": "snow",
+      "population": 18,
+      "x": 1584,
+      "y": 371
+    },
+    {
+      "name": "Frozen Ridge",
+      "description": "Frozen Ridge is untamed country where courage matters and frosted passes and aurora-lit nights.",
+      "type": "wild",
+      "biomeTag": "snow",
+      "population": 11,
+      "x": 1273,
+      "y": 310
+    },
+    {
+      "name": "Hollow Catacombs",
+      "description": "Hollow Catacombs is a dangerous place whispered about in taverns, carved into frosted passes and aurora-lit nights.",
+      "type": "dungeon",
+      "biomeTag": "snow",
+      "population": 0,
+      "x": 1153,
+      "y": 501
+    },
+    {
+      "name": "Frost Cavern",
+      "description": "Frost Cavern is a dangerous place whispered about in taverns, carved into frosted passes and aurora-lit nights.",
+      "type": "dungeon",
+      "biomeTag": "snow",
+      "population": 0,
+      "x": 1344,
+      "y": 470
+    },
+    {
+      "name": "Buried Vault",
+      "description": "Buried Vault is a dangerous place whispered about in taverns, carved into frosted passes and aurora-lit nights.",
+      "type": "dungeon",
+      "biomeTag": "snow",
+      "population": 0,
+      "x": 813,
+      "y": 272
+    },
+    {
+      "name": "Winter Spire",
+      "description": "Winter Spire is a famed landmark that draws adventurers, tied to frosted passes and aurora-lit nights.",
+      "type": "landmark",
+      "biomeTag": "snow",
+      "population": 0,
+      "x": 1637,
+      "y": 229
+    },
+    {
+      "name": "Star Shrine",
+      "description": "Star Shrine is a famed landmark that draws adventurers, tied to frosted passes and aurora-lit nights.",
+      "type": "landmark",
+      "biomeTag": "snow",
+      "population": 0,
+      "x": 1182,
+      "y": 119
+    },
+    {
+      "name": "Highspire",
+      "description": "Highspire is a bustling hub of trade and rumors, set amid jagged cliffs and stormy ridgelines.",
+      "type": "major_city",
+      "biomeTag": "mountain",
+      "population": 254,
+      "x": 1794,
+      "y": 152
+    },
+    {
+      "name": "Stone Lookout",
+      "description": "Stone Lookout is a cozy stop for travelers, known for friendly faces and jagged cliffs and stormy ridgelines.",
+      "type": "town",
+      "biomeTag": "mountain",
+      "population": 80,
+      "x": 2356,
+      "y": 552
+    },
+    {
+      "name": "High Crossing",
+      "description": "High Crossing is a cozy stop for travelers, known for friendly faces and jagged cliffs and stormy ridgelines.",
+      "type": "town",
+      "biomeTag": "mountain",
+      "population": 89,
+      "x": 2258,
+      "y": 837
+    },
+    {
+      "name": "Cloud Pass",
+      "description": "Cloud Pass is a cozy stop for travelers, known for friendly faces and jagged cliffs and stormy ridgelines.",
+      "type": "town",
+      "biomeTag": "mountain",
+      "population": 99,
+      "x": 2218,
+      "y": 913
+    },
+    {
+      "name": "Dragon Pass",
+      "description": "Dragon Pass is a cozy stop for travelers, known for friendly faces and jagged cliffs and stormy ridgelines.",
+      "type": "town",
+      "biomeTag": "mountain",
+      "population": 97,
+      "x": 1617,
+      "y": 486
+    },
+    {
+      "name": "Iron Spire",
+      "description": "Iron Spire is a cozy stop for travelers, known for friendly faces and jagged cliffs and stormy ridgelines.",
+      "type": "town",
+      "biomeTag": "mountain",
+      "population": 49,
+      "x": 1742,
+      "y": 945
+    },
+    {
+      "name": "Windy Cliffs",
+      "description": "Windy Cliffs is untamed country where courage matters and jagged cliffs and stormy ridgelines.",
+      "type": "wild",
+      "biomeTag": "mountain",
+      "population": 17,
+      "x": 2009,
+      "y": 895
+    },
+    {
+      "name": "Cloud Slopes",
+      "description": "Cloud Slopes is untamed country where courage matters and jagged cliffs and stormy ridgelines.",
+      "type": "wild",
+      "biomeTag": "mountain",
+      "population": 7,
+      "x": 2033,
+      "y": 612
+    },
+    {
+      "name": "Wyrm Grotto",
+      "description": "Wyrm Grotto is a dangerous place whispered about in taverns, carved into echoing tunnels and glittering seams of ore.",
+      "type": "dungeon",
+      "biomeTag": "cave",
+      "population": 0,
+      "x": 2021,
+      "y": 598
+    },
+    {
+      "name": "Echo Cave",
+      "description": "Echo Cave is a dangerous place whispered about in taverns, carved into echoing tunnels and glittering seams of ore.",
+      "type": "dungeon",
+      "biomeTag": "cave",
+      "population": 0,
+      "x": 1528,
+      "y": 714
+    },
+    {
+      "name": "Gloom Cave",
+      "description": "Gloom Cave is a dangerous place whispered about in taverns, carved into jagged cliffs and stormy ridgelines.",
+      "type": "dungeon",
+      "biomeTag": "mountain",
+      "population": 0,
+      "x": 2152,
+      "y": 266
+    },
+    {
+      "name": "Shadow Chasm",
+      "description": "Shadow Chasm is a dangerous place whispered about in taverns, carved into jagged cliffs and stormy ridgelines.",
+      "type": "dungeon",
+      "biomeTag": "mountain",
+      "population": 0,
+      "x": 1941,
+      "y": 1002
+    },
+    {
+      "name": "High Castle",
+      "description": "High Castle is a famed landmark that draws adventurers, tied to jagged cliffs and stormy ridgelines.",
+      "type": "landmark",
+      "biomeTag": "mountain",
+      "population": 0,
+      "x": 1851,
+      "y": 536
+    },
+    {
+      "name": "Mossgate",
+      "description": "Mossgate is a bustling hub of trade and rumors, set amid mossy stonework and half-forgotten halls.",
+      "type": "major_city",
+      "biomeTag": "ruins",
+      "population": 246,
+      "x": 556,
+      "y": 77
+    },
+    {
+      "name": "Crumble Rest",
+      "description": "Crumble Rest is a cozy stop for travelers, known for friendly faces and mossy stonework and half-forgotten halls.",
+      "type": "town",
+      "biomeTag": "ruins",
+      "population": 53,
+      "x": 865,
+      "y": 548
+    },
+    {
+      "name": "Silent Rest",
+      "description": "Silent Rest is a cozy stop for travelers, known for friendly faces and mossy stonework and half-forgotten halls.",
+      "type": "town",
+      "biomeTag": "ruins",
+      "population": 105,
+      "x": 595,
+      "y": 424
+    },
+    {
+      "name": "Moss Keep",
+      "description": "Moss Keep is a cozy stop for travelers, known for friendly faces and mossy stonework and half-forgotten halls.",
+      "type": "town",
+      "biomeTag": "ruins",
+      "population": 75,
+      "x": 602,
+      "y": 365
+    },
+    {
+      "name": "Lost Gardens",
+      "description": "Lost Gardens is untamed country where courage matters and mossy stonework and half-forgotten halls.",
+      "type": "wild",
+      "biomeTag": "ruins",
+      "population": 9,
+      "x": 285,
+      "y": 507
+    },
+    {
+      "name": "Lost Courts",
+      "description": "Lost Courts is untamed country where courage matters and mossy stonework and half-forgotten halls.",
+      "type": "wild",
+      "biomeTag": "ruins",
+      "population": 16,
+      "x": 435,
+      "y": 763
+    },
+    {
+      "name": "Crumbling Cells",
+      "description": "Crumbling Cells is a dangerous place whispered about in taverns, carved into mossy stonework and half-forgotten halls.",
+      "type": "dungeon",
+      "biomeTag": "ruins",
+      "population": 0,
+      "x": 680,
+      "y": 710
+    },
+    {
+      "name": "Cursed Passages",
+      "description": "Cursed Passages is a dangerous place whispered about in taverns, carved into mossy stonework and half-forgotten halls.",
+      "type": "dungeon",
+      "biomeTag": "ruins",
+      "population": 0,
+      "x": 1062,
+      "y": 401
+    },
+    {
+      "name": "Ancient Chambers",
+      "description": "Ancient Chambers is a dangerous place whispered about in taverns, carved into mossy stonework and half-forgotten halls.",
+      "type": "dungeon",
+      "biomeTag": "ruins",
+      "population": 0,
+      "x": 711,
+      "y": 698
+    },
+    {
+      "name": "Cursed Catacombs",
+      "description": "Cursed Catacombs is a dangerous place whispered about in taverns, carved into mossy stonework and half-forgotten halls.",
+      "type": "dungeon",
+      "biomeTag": "ruins",
+      "population": 0,
+      "x": 843,
+      "y": 322
+    },
+    {
+      "name": "Shattered Tower",
+      "description": "Shattered Tower is a famed landmark that draws adventurers, tied to mossy stonework and half-forgotten halls.",
+      "type": "landmark",
+      "biomeTag": "ruins",
+      "population": 0,
+      "x": 440,
+      "y": 775
+    },
+    {
+      "name": "Ancient Sanctuary",
+      "description": "Ancient Sanctuary is a famed landmark that draws adventurers, tied to mossy stonework and half-forgotten halls.",
+      "type": "landmark",
+      "biomeTag": "ruins",
+      "population": 0,
+      "x": 946,
+      "y": 191
+    },
+    {
+      "name": "Seastone Harbor",
+      "description": "Seastone Harbor is a bustling hub of trade and rumors, set amid salt air, tidal coves, and distant bells.",
+      "type": "major_city",
+      "biomeTag": "water",
+      "population": 252,
+      "x": 1964,
+      "y": 1698
+    },
+    {
+      "name": "Tide Market",
+      "description": "Tide Market is a cozy stop for travelers, known for friendly faces and salt air, tidal coves, and distant bells.",
+      "type": "town",
+      "biomeTag": "water",
+      "population": 36,
+      "x": 2260,
+      "y": 1333
+    },
+    {
+      "name": "Reef Dock",
+      "description": "Reef Dock is a cozy stop for travelers, known for friendly faces and salt air, tidal coves, and distant bells.",
+      "type": "town",
+      "biomeTag": "water",
+      "population": 92,
+      "x": 1883,
+      "y": 1426
+    },
+    {
+      "name": "Reef Reef",
+      "description": "Reef Reef is a cozy stop for travelers, known for friendly faces and salt air, tidal coves, and distant bells.",
+      "type": "town",
+      "biomeTag": "water",
+      "population": 77,
+      "x": 2049,
+      "y": 1385
+    },
+    {
+      "name": "Tide Quay",
+      "description": "Tide Quay is a cozy stop for travelers, known for friendly faces and salt air, tidal coves, and distant bells.",
+      "type": "town",
+      "biomeTag": "water",
+      "population": 73,
+      "x": 2093,
+      "y": 1156
+    },
+    {
+      "name": "Foamy Shallows",
+      "description": "Foamy Shallows is untamed country where courage matters and salt air, tidal coves, and distant bells.",
+      "type": "wild",
+      "biomeTag": "water",
+      "population": 16,
+      "x": 1891,
+      "y": 975
+    },
+    {
+      "name": "Sea Shallows",
+      "description": "Sea Shallows is untamed country where courage matters and salt air, tidal coves, and distant bells.",
+      "type": "wild",
+      "biomeTag": "water",
+      "population": 22,
+      "x": 2172,
+      "y": 1437
+    },
+    {
+      "name": "Sunken Caverns",
+      "description": "Sunken Caverns is a dangerous place whispered about in taverns, carved into salt air, tidal coves, and distant bells.",
+      "type": "dungeon",
+      "biomeTag": "water",
+      "population": 0,
+      "x": 2287,
+      "y": 1197
+    },
+    {
+      "name": "Deep Wreck",
+      "description": "Deep Wreck is a dangerous place whispered about in taverns, carved into salt air, tidal coves, and distant bells.",
+      "type": "dungeon",
+      "biomeTag": "water",
+      "population": 0,
+      "x": 1801,
+      "y": 1608
+    },
+    {
+      "name": "Tide Spire",
+      "description": "Tide Spire is a famed landmark that draws adventurers, tied to salt air, tidal coves, and distant bells.",
+      "type": "landmark",
+      "biomeTag": "water",
+      "population": 0,
+      "x": 2275,
+      "y": 1297
+    },
+    {
+      "name": "Tide Beacon",
+      "description": "Tide Beacon is a famed landmark that draws adventurers, tied to salt air, tidal coves, and distant bells.",
+      "type": "landmark",
+      "biomeTag": "water",
+      "population": 0,
+      "x": 1879,
+      "y": 1378
+    }
+  ],
+  "connections": [
+    {
+      "from": "Bandit Hideout",
+      "to": "King's Landing",
+      "distance": 1
+    },
+    {
+      "from": "King's Landing",
+      "to": "Oak Gate",
+      "distance": 1
+    },
+    {
+      "from": "Honey Vale",
+      "to": "King's Landing",
+      "distance": 2
+    },
+    {
+      "from": "Hollow Warren",
+      "to": "King's Landing",
+      "distance": 2
+    },
+    {
+      "from": "Honey Vale",
+      "to": "Oak Gate",
+      "distance": 1
+    },
+    {
+      "from": "Bandit Hideout",
+      "to": "Oak Gate",
+      "distance": 1
+    },
+    {
+      "from": "Breezy Hollow",
+      "to": "Honey Vale",
+      "distance": 1
+    },
+    {
+      "from": "Meadow Gate",
+      "to": "Old Watchtower",
+      "distance": 1
+    },
+    {
+      "from": "Honey Vale",
+      "to": "Meadow Gate",
+      "distance": 2
+    },
+    {
+      "from": "Breezy Hollow",
+      "to": "Meadow Gate",
+      "distance": 2
+    },
+    {
+      "from": "Breezy Hollow",
+      "to": "Cider Hearth",
+      "distance": 1
+    },
+    {
+      "from": "Cider Hearth",
+      "to": "Honey Vale",
+      "distance": 2
+    },
+    {
+      "from": "Cider Hearth",
+      "to": "Hollow Warren",
+      "distance": 2
+    },
+    {
+      "from": "Golden Glade",
+      "to": "Oak Spring",
+      "distance": 1
+    },
+    {
+      "from": "Oak Spring",
+      "to": "Old Watchtower",
+      "distance": 3
+    },
+    {
+      "from": "Bandit Hideout",
+      "to": "Oak Spring",
+      "distance": 3
+    },
+    {
+      "from": "Hollow Warren",
+      "to": "Lark Vale",
+      "distance": 1
+    },
+    {
+      "from": "Lark Vale",
+      "to": "Old Tunnels",
+      "distance": 2
+    },
+    {
+      "from": "King's Landing",
+      "to": "Lark Vale",
+      "distance": 3
+    },
+    {
+      "from": "Sun Vale",
+      "to": "Thorny Hollow",
+      "distance": 1
+    },
+    {
+      "from": "Sun Vale",
+      "to": "Sunlit Monastery",
+      "distance": 1
+    },
+    {
+      "from": "Old Tunnels",
+      "to": "Sun Vale",
+      "distance": 2
+    },
+    {
+      "from": "Sunlit Monastery",
+      "to": "Thorny Hollow",
+      "distance": 1
+    },
+    {
+      "from": "Bandit Hideout",
+      "to": "Golden Glade",
+      "distance": 2
+    },
+    {
+      "from": "Hollow Warren",
+      "to": "Oak Gate",
+      "distance": 2
+    },
+    {
+      "from": "Old Tunnels",
+      "to": "Thorny Hollow",
+      "distance": 2
+    },
+    {
+      "from": "Honey Vale",
+      "to": "Old Watchtower",
+      "distance": 2
+    },
+    {
+      "from": "Shade Glen",
+      "to": "Whispering Woods",
+      "distance": 1
+    },
+    {
+      "from": "Creeping Grotto",
+      "to": "Whispering Woods",
+      "distance": 1
+    },
+    {
+      "from": "Stag Bridge",
+      "to": "Woodcrest",
+      "distance": 1
+    },
+    {
+      "from": "Fox Hollow",
+      "to": "Woodcrest",
+      "distance": 1
+    },
+    {
+      "from": "Whisper Mill",
+      "to": "Woodcrest",
+      "distance": 2
+    },
+    {
+      "from": "Goblin Cave 2",
+      "to": "Woodcrest",
+      "distance": 2
+    },
+    {
+      "from": "Hollow Vale",
+      "to": "Spider Den",
+      "distance": 1
+    },
+    {
+      "from": "Fern Bridge",
+      "to": "Hollow Vale",
+      "distance": 2
+    },
+    {
+      "from": "Fae Hollow",
+      "to": "Hollow Vale",
+      "distance": 2
+    },
+    {
+      "from": "Fern Bridge",
+      "to": "Shadowed Marsh",
+      "distance": 1
+    },
+    {
+      "from": "Fern Bridge",
+      "to": "Quiet Woods",
+      "distance": 1
+    },
+    {
+      "from": "Fox Hollow",
+      "to": "Whisper Mill",
+      "distance": 1
+    },
+    {
+      "from": "Creeping Grotto",
+      "to": "Whisper Mill",
+      "distance": 1
+    },
+    {
+      "from": "Fae Hollow",
+      "to": "Whisper Mill",
+      "distance": 1
+    },
+    {
+      "from": "Fox Hollow",
+      "to": "Shade Glen",
+      "distance": 2
+    },
+    {
+      "from": "Creeping Grotto",
+      "to": "Shade Glen",
+      "distance": 2
+    },
+    {
+      "from": "Fox Hollow",
+      "to": "Whispering Woods",
+      "distance": 1
+    },
+    {
+      "from": "Shade Watch",
+      "to": "Spider Den",
+      "distance": 1
+    },
+    {
+      "from": "Moon Grotto",
+      "to": "Shade Watch",
+      "distance": 1
+    },
+    {
+      "from": "Fae Hollow",
+      "to": "Shade Watch",
+      "distance": 2
+    },
+    {
+      "from": "Quiet Woods",
+      "to": "Shadowed Marsh",
+      "distance": 1
+    },
+    {
+      "from": "Fae Hollow",
+      "to": "Spider Den",
+      "distance": 1
+    },
+    {
+      "from": "Creeping Grotto",
+      "to": "Fae Hollow",
+      "distance": 1
+    },
+    {
+      "from": "Creeping Grotto",
+      "to": "Moon Grotto",
+      "distance": 1
+    },
+    {
+      "from": "Goblin Cave 2",
+      "to": "Whispering Tree",
+      "distance": 1
+    },
+    {
+      "from": "Goblin Cave 2",
+      "to": "Stag Bridge",
+      "distance": 2
+    },
+    {
+      "from": "Stag Bridge",
+      "to": "Whisper Mill",
+      "distance": 1
+    },
+    {
+      "from": "Stag Bridge",
+      "to": "Whispering Tree",
+      "distance": 3
+    },
+    {
+      "from": "Cinder Camp",
+      "to": "Sandport",
+      "distance": 1
+    },
+    {
+      "from": "Cinder Wells",
+      "to": "Sandport",
+      "distance": 1
+    },
+    {
+      "from": "Sandport",
+      "to": "Wind Lighthouse",
+      "distance": 2
+    },
+    {
+      "from": "Saffron Saltpan",
+      "to": "Sandport",
+      "distance": 2
+    },
+    {
+      "from": "Saffron Monument",
+      "to": "Spice Bazaar",
+      "distance": 1
+    },
+    {
+      "from": "Spice Bazaar",
+      "to": "Sunken Ruins",
+      "distance": 2
+    },
+    {
+      "from": "Spice Bazaar",
+      "to": "Wind Lighthouse",
+      "distance": 2
+    },
+    {
+      "from": "Glass Badlands",
+      "to": "Oasis Bazaar",
+      "distance": 1
+    },
+    {
+      "from": "Oasis Bazaar",
+      "to": "Wind Lighthouse",
+      "distance": 3
+    },
+    {
+      "from": "Oasis Bazaar",
+      "to": "Saffron Monument",
+      "distance": 3
+    },
+    {
+      "from": "Cinder Market",
+      "to": "Saffron Saltpan",
+      "distance": 1
+    },
+    {
+      "from": "Cinder Market",
+      "to": "Hollow Crypt",
+      "distance": 1
+    },
+    {
+      "from": "Cinder Camp",
+      "to": "Cinder Market",
+      "distance": 1
+    },
+    {
+      "from": "Cinder Camp",
+      "to": "Saffron Saltpan",
+      "distance": 1
+    },
+    {
+      "from": "Cinder Camp",
+      "to": "Cinder Wells",
+      "distance": 1
+    },
+    {
+      "from": "Burning Badlands",
+      "to": "Cinder Wells",
+      "distance": 2
+    },
+    {
+      "from": "Burning Badlands",
+      "to": "Saffron Saltpan",
+      "distance": 1
+    },
+    {
+      "from": "Burning Badlands",
+      "to": "Cinder Market",
+      "distance": 1
+    },
+    {
+      "from": "Glass Badlands",
+      "to": "Wind Lighthouse",
+      "distance": 2
+    },
+    {
+      "from": "Saffron Monument",
+      "to": "Sunken Ruins",
+      "distance": 2
+    },
+    {
+      "from": "Sunken Ruins",
+      "to": "Wind Lighthouse",
+      "distance": 2
+    },
+    {
+      "from": "Hollow Crypt",
+      "to": "Hollow Tomb",
+      "distance": 1
+    },
+    {
+      "from": "Cinder Market",
+      "to": "Hollow Tomb",
+      "distance": 2
+    },
+    {
+      "from": "Saffron Monument",
+      "to": "Wind Lighthouse",
+      "distance": 1
+    },
+    {
+      "from": "Frostgate",
+      "to": "Hollow Catacombs",
+      "distance": 1
+    },
+    {
+      "from": "Aurora Ridge",
+      "to": "Frostgate",
+      "distance": 2
+    },
+    {
+      "from": "Frost Crossing",
+      "to": "Frostgate",
+      "distance": 3
+    },
+    {
+      "from": "Frostgate",
+      "to": "Glacier Reach",
+      "distance": 3
+    },
+    {
+      "from": "Buried Vault",
+      "to": "Snow Cairn",
+      "distance": 1
+    },
+    {
+      "from": "Frost Crossing",
+      "to": "Snow Cairn",
+      "distance": 2
+    },
+    {
+      "from": "Glacier Reach",
+      "to": "Snow Cairn",
+      "distance": 2
+    },
+    {
+      "from": "Frost Crossing",
+      "to": "Glacier Reach",
+      "distance": 1
+    },
+    {
+      "from": "Frozen Ridge",
+      "to": "Glacier Reach",
+      "distance": 1
+    },
+    {
+      "from": "Glacier Reach",
+      "to": "Star Shrine",
+      "distance": 2
+    },
+    {
+      "from": "Frost Crossing",
+      "to": "Frozen Ridge",
+      "distance": 2
+    },
+    {
+      "from": "Frost Crossing",
+      "to": "Hollow Catacombs",
+      "distance": 2
+    },
+    {
+      "from": "Silver Pass",
+      "to": "Winter Pass",
+      "distance": 2
+    },
+    {
+      "from": "Winter Pass",
+      "to": "Winter Spire",
+      "distance": 2
+    },
+    {
+      "from": "Star Shrine",
+      "to": "Winter Pass",
+      "distance": 3
+    },
+    {
+      "from": "Silver Pass",
+      "to": "Winter Spire",
+      "distance": 1
+    },
+    {
+      "from": "Aurora Tundra",
+      "to": "Silver Pass",
+      "distance": 1
+    },
+    {
+      "from": "Aurora Ridge",
+      "to": "Frost Cavern",
+      "distance": 1
+    },
+    {
+      "from": "Aurora Ridge",
+      "to": "Hollow Catacombs",
+      "distance": 2
+    },
+    {
+      "from": "Aurora Tundra",
+      "to": "Winter Spire",
+      "distance": 1
+    },
+    {
+      "from": "Frost Cavern",
+      "to": "Frozen Ridge",
+      "distance": 1
+    },
+    {
+      "from": "Frost Cavern",
+      "to": "Hollow Catacombs",
+      "distance": 2
+    },
+    {
+      "from": "Buried Vault",
+      "to": "Frost Crossing",
+      "distance": 2
+    },
+    {
+      "from": "Frozen Ridge",
+      "to": "Star Shrine",
+      "distance": 2
+    },
+    {
+      "from": "Goblin Cave",
+      "to": "Iron Spire",
+      "distance": 2
+    },
+    {
+      "from": "Echo Cave",
+      "to": "Goblin Cave",
+      "distance": 3
+    },
+    {
+      "from": "Dragon Peak",
+      "to": "Gloom Cave",
+      "distance": 1
+    },
+    {
+      "from": "Demon King's Castle",
+      "to": "Dragon Peak",
+      "distance": 2
+    },
+    {
+      "from": "Demon King's Castle",
+      "to": "Stone Lookout",
+      "distance": 1
+    },
+    {
+      "from": "Cloud Slopes",
+      "to": "Demon King's Castle",
+      "distance": 2
+    },
+    {
+      "from": "Dragon Peak",
+      "to": "Highspire",
+      "distance": 3
+    },
+    {
+      "from": "Gloom Cave",
+      "to": "Highspire",
+      "distance": 3
+    },
+    {
+      "from": "Dragon Pass",
+      "to": "Highspire",
+      "distance": 3
+    },
+    {
+      "from": "High Castle",
+      "to": "Highspire",
+      "distance": 3
+    },
+    {
+      "from": "High Crossing",
+      "to": "Stone Lookout",
+      "distance": 3
+    },
+    {
+      "from": "Cloud Slopes",
+      "to": "Stone Lookout",
+      "distance": 3
+    },
+    {
+      "from": "Cloud Pass",
+      "to": "High Crossing",
+      "distance": 1
+    },
+    {
+      "from": "High Crossing",
+      "to": "Windy Cliffs",
+      "distance": 2
+    },
+    {
+      "from": "Cloud Pass",
+      "to": "Windy Cliffs",
+      "distance": 2
+    },
+    {
+      "from": "Cloud Pass",
+      "to": "Shadow Chasm",
+      "distance": 2
+    },
+    {
+      "from": "Dragon Pass",
+      "to": "High Castle",
+      "distance": 2
+    },
+    {
+      "from": "Dragon Pass",
+      "to": "Echo Cave",
+      "distance": 2
+    },
+    {
+      "from": "Iron Spire",
+      "to": "Shadow Chasm",
+      "distance": 2
+    },
+    {
+      "from": "Iron Spire",
+      "to": "Windy Cliffs",
+      "distance": 2
+    },
+    {
+      "from": "Shadow Chasm",
+      "to": "Windy Cliffs",
+      "distance": 1
+    },
+    {
+      "from": "Cloud Slopes",
+      "to": "Wyrm Grotto",
+      "distance": 1
+    },
+    {
+      "from": "Cloud Slopes",
+      "to": "High Castle",
+      "distance": 2
+    },
+    {
+      "from": "High Castle",
+      "to": "Wyrm Grotto",
+      "distance": 2
+    },
+    {
+      "from": "Demon King's Castle",
+      "to": "Gloom Cave",
+      "distance": 2
+    },
+    {
+      "from": "Ancient Library",
+      "to": "Cursed Catacombs",
+      "distance": 1
+    },
+    {
+      "from": "Ancient Library",
+      "to": "Ancient Sanctuary",
+      "distance": 1
+    },
+    {
+      "from": "Moss Keep",
+      "to": "Mossgate",
+      "distance": 2
+    },
+    {
+      "from": "Mossgate",
+      "to": "Silent Rest",
+      "distance": 3
+    },
+    {
+      "from": "Ancient Library",
+      "to": "Mossgate",
+      "distance": 3
+    },
+    {
+      "from": "Cursed Catacombs",
+      "to": "Mossgate",
+      "distance": 3
+    },
+    {
+      "from": "Ancient Chambers",
+      "to": "Crumble Rest",
+      "distance": 2
+    },
+    {
+      "from": "Crumble Rest",
+      "to": "Cursed Catacombs",
+      "distance": 2
+    },
+    {
+      "from": "Ancient Library",
+      "to": "Crumble Rest",
+      "distance": 2
+    },
+    {
+      "from": "Moss Keep",
+      "to": "Silent Rest",
+      "distance": 1
+    },
+    {
+      "from": "Ancient Library",
+      "to": "Silent Rest",
+      "distance": 2
+    },
+    {
+      "from": "Cursed Catacombs",
+      "to": "Silent Rest",
+      "distance": 2
+    },
+    {
+      "from": "Ancient Library",
+      "to": "Moss Keep",
+      "distance": 2
+    },
+    {
+      "from": "Cursed Catacombs",
+      "to": "Moss Keep",
+      "distance": 2
+    },
+    {
+      "from": "Lost Courts",
+      "to": "Lost Gardens",
+      "distance": 2
+    },
+    {
+      "from": "Lost Gardens",
+      "to": "Shattered Tower",
+      "distance": 3
+    },
+    {
+      "from": "Lost Courts",
+      "to": "Shattered Tower",
+      "distance": 1
+    },
+    {
+      "from": "Crumbling Cells",
+      "to": "Lost Courts",
+      "distance": 2
+    },
+    {
+      "from": "Ancient Chambers",
+      "to": "Crumbling Cells",
+      "distance": 1
+    },
+    {
+      "from": "Crumble Rest",
+      "to": "Crumbling Cells",
+      "distance": 2
+    },
+    {
+      "from": "Cursed Catacombs",
+      "to": "Cursed Passages",
+      "distance": 2
+    },
+    {
+      "from": "Ancient Library",
+      "to": "Cursed Passages",
+      "distance": 2
+    },
+    {
+      "from": "Ancient Sanctuary",
+      "to": "Cursed Catacombs",
+      "distance": 1
+    },
+    {
+      "from": "Crumbling Cells",
+      "to": "Shattered Tower",
+      "distance": 2
+    },
+    {
+      "from": "Sea Shallows",
+      "to": "Sunken Temple",
+      "distance": 1
+    },
+    {
+      "from": "Reef Reef",
+      "to": "Sunken Temple",
+      "distance": 1
+    },
+    {
+      "from": "Deep Wreck",
+      "to": "Seastone Harbor",
+      "distance": 2
+    },
+    {
+      "from": "Seastone Harbor",
+      "to": "Sunken Temple",
+      "distance": 2
+    },
+    {
+      "from": "Reef Dock",
+      "to": "Seastone Harbor",
+      "distance": 2
+    },
+    {
+      "from": "Reef Reef",
+      "to": "Seastone Harbor",
+      "distance": 3
+    },
+    {
+      "from": "Tide Market",
+      "to": "Tide Spire",
+      "distance": 1
+    },
+    {
+      "from": "Sea Shallows",
+      "to": "Tide Market",
+      "distance": 1
+    },
+    {
+      "from": "Sunken Caverns",
+      "to": "Tide Market",
+      "distance": 1
+    },
+    {
+      "from": "Reef Dock",
+      "to": "Tide Beacon",
+      "distance": 1
+    },
+    {
+      "from": "Reef Dock",
+      "to": "Reef Reef",
+      "distance": 1
+    },
+    {
+      "from": "Deep Wreck",
+      "to": "Reef Dock",
+      "distance": 2
+    },
+    {
+      "from": "Reef Reef",
+      "to": "Sea Shallows",
+      "distance": 1
+    },
+    {
+      "from": "Reef Reef",
+      "to": "Tide Beacon",
+      "distance": 1
+    },
+    {
+      "from": "Sunken Caverns",
+      "to": "Tide Quay",
+      "distance": 2
+    },
+    {
+      "from": "Tide Quay",
+      "to": "Tide Spire",
+      "distance": 2
+    },
+    {
+      "from": "Reef Reef",
+      "to": "Tide Quay",
+      "distance": 2
+    },
+    {
+      "from": "Foamy Shallows",
+      "to": "Tide Quay",
+      "distance": 2
+    },
+    {
+      "from": "Foamy Shallows",
+      "to": "Tide Beacon",
+      "distance": 3
+    },
+    {
+      "from": "Sunken Caverns",
+      "to": "Tide Spire",
+      "distance": 1
+    },
+    {
+      "from": "King's Landing",
+      "to": "Woodcrest",
+      "distance": 5
+    },
+    {
+      "from": "Sandport",
+      "to": "Woodcrest",
+      "distance": 7
+    },
+    {
+      "from": "Frostgate",
+      "to": "Sandport",
+      "distance": 8
+    },
+    {
+      "from": "Frostgate",
+      "to": "Highspire",
+      "distance": 7
+    },
+    {
+      "from": "Highspire",
+      "to": "Mossgate",
+      "distance": 10
+    },
+    {
+      "from": "Mossgate",
+      "to": "Seastone Harbor",
+      "distance": 12
+    },
+    {
+      "from": "King's Landing",
+      "to": "Seastone Harbor",
+      "distance": 9
+    },
+    {
+      "from": "King's Landing",
+      "to": "Sandport",
+      "distance": 5
+    },
+    {
+      "from": "Frostgate",
+      "to": "King's Landing",
+      "distance": 3
+    },
+    {
+      "from": "Highspire",
+      "to": "King's Landing",
+      "distance": 8
+    },
+    {
+      "from": "King's Landing",
+      "to": "Mossgate",
+      "distance": 9
+    },
+    {
+      "from": "Ancient Library",
+      "to": "Buried Vault",
+      "distance": 1
+    },
+    {
+      "from": "Ancient Library",
+      "to": "Snow Cairn",
+      "distance": 1
+    },
+    {
+      "from": "Dragon Peak",
+      "to": "Wyrm Grotto",
+      "distance": 3
+    },
+    {
+      "from": "Demon King's Castle",
+      "to": "Wyrm Grotto",
+      "distance": 2
+    }
+  ]
+}

@@ -153,3 +153,41 @@ Latest assessment (2026-02-05):
   - Depends on: core backend flows
 - Health checks + admin endpoints (optional) (**medium**)  
   - Depends on: deployment target
+
+---
+
+## Phase 5 — World Expansion & Visual Content (V1 “Large World” Pass)
+
+Goal: move from a 5-POI demo map to a **kingdom-scale world** with diverse biomes/POIs and enough visual anchors to feel like “Majesty structure + cozy Stardew pixel vibe”.
+
+Source of truth:
+- `docs/plans/2026-02-05-clawcraft-v1-updated.md` (target: ~100 POIs, location taxonomy, quest refresh cadence)
+- `docs/plans/2026-02-05-clawcraft-design-technical-specification.md` (visual direction + asset pipeline approach)
+- `docs/plans/2026-02-04-visual-assets-pipeline.md` (AI asset + background removal workflow)
+
+### 5.1 World data + seeding (large POI graph)
+- Add deterministic world generator + committed world dataset (**medium**)  
+  - Deliverable:
+    - `scripts/dev/generate-world.mjs`
+    - `data/world/world-v1-large.json` (>= 100 POIs)
+    - `data/world/world-v1-small.json` (fast dev fallback)
+- Wire `npm run dev:seed` to seed either small or large world (**simple**)  
+  - Acceptance: `SEED_WORLD=large npm run dev:seed` creates 100+ `Location`s + a connected `LocationConnection` graph.
+
+### 5.2 Map readability at scale (100+ POIs)
+- Tune label declutter thresholds for large-world zoom levels (**medium**)  
+  - Acceptance: at default fit zoom, **major cities + landmarks** are visible; towns/dungeons appear as you zoom in.
+- Add generic POI icon set per `LocationType` as a placeholder until unique sprites exist (**medium**)  
+  - Acceptance: every POI renders with a stable icon even if it doesn’t have a bespoke sprite.
+
+### 5.3 Biomes + art pipeline (incremental)
+- Expand biome tags used in the seeded world (plains/forest/desert/snow/mountain/ruins/water + cave dungeons) (**simple**)  
+  - Acceptance: seeded POIs are clustered so biome patches overlap into readable regions.
+- Replace procedural placeholder overlays with real sprites over time using the pipeline docs (**complex**)  
+  - Deliverable: a growing set of transparent PNG overlays in `public/assets/` with consistent style.
+
+### 5.4 Demo + load harness updates
+- Update demo population scripts to distribute agents across more POIs (**simple**)  
+  - Acceptance: `npm run dev:demo -- --party` creates visible activity in multiple biomes.
+- Keep performance harnesses up to date under large-world conditions (**medium**)  
+  - Acceptance: `/api/world-state?synth_agents=2000&synth_only=1` remains interactive; record baselines in `docs/plans/*`.

@@ -13,6 +13,7 @@
     "test:node": "tsc -p tsconfig.node-tests.json && npm run node:prep && node --test .tmp/node-tests/**/*.test.js",
     "test": "npm run test:node",
     "dev:seed": "node scripts/dev/seed.mjs",
+    "dev:world:gen": "node scripts/dev/generate-world.mjs",
     "dev:demo:reset": "node scripts/dev/demo-reset.mjs",
     "dev:smoke": "node scripts/dev/smoke.mjs",
     "dev:demo": "node scripts/dev/demo.mjs",
