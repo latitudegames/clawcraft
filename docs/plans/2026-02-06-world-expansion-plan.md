@@ -89,7 +89,8 @@ To align with the spec’s “hybrid approach” (tile base + overlay sprites), 
      - Signature POIs: **10-15 biome-aware POI sprites** (128-256px) to replace generic icons for major towns/landmarks. (done, initial set)
        - Examples: castle, port, mine, shrine, ruins gate, wizard tower, desert oasis town, snowy keep, etc.
      - Next target for “more variety” without exploding asset count:
-       - Per-biome `LocationType` variants for towns + dungeons (forest town vs desert town, etc.)
+       - Per-biome `LocationType` variants for towns + dungeons (forest town vs desert town, etc.) (done)
+       - Optional: per-biome variants for wild + landmark icons (only if needed for readability at fit-zoom)
        - Add 2-4 additional macro cluster variants for biomes that still feel repetitive at 100+ POIs (forest/plains likely first)
      - Region backgrounds: replace “biome circles around POIs” with **biome region fill** so terrain is legible at default zoom. (done)
    - Asset creation pipeline remains:

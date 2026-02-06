@@ -89,7 +89,8 @@ If conflicts appear, update this tracker with the decision and link the doc chan
 - [ ] Scale biome asset variety to reduce repetition:
   - [x] Micro decor: 6 variants per biome (64x64)
   - [x] Macro decor: 2 variants per biome (256x256)
-  - [ ] Per-biome `LocationType` variants for towns + dungeons (forest town vs desert town, etc.)
+  - [x] Per-biome `LocationType` variants for towns + dungeons (forest town vs desert town, etc.)
+  - [x] Per-biome `LocationType` variants for wild areas (optional, helps “region feel” at zoom)
 - [x] Make biome regions legible at default zoom (background/terrain):
   - [x] Add deterministic biome region fill background (Voronoi-ish nearest-per-biome field)
   - [ ] Reduce remaining “biome circles around POIs” further (keep only as subtle POI-local variation)
