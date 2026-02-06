@@ -58,7 +58,7 @@ Scope: Spectator UI parity vs:
 
 ## Remaining Gaps
 
-1. Map visuals are still too sparse vs. spec target (missing stronger terrain/POI readability and lower bubble crowding at dense hotspots).
+1. Map visuals are still short of spec target (procedural biome tiling helps, but we still need decorative overlays + stronger terrain variety and lower bubble crowding at dense hotspots).
 2. Typography and spacing still need a tighter pass for parity-level polish.
 3. Accessibility contrast and screen-reader pass remains to be done.
 4. Optional polish (ambient effects) is intentionally deferred until parity QA closes.

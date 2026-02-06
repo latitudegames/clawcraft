@@ -50,6 +50,7 @@ If conflicts appear, update this tracker with the decision and link the doc chan
 - [x] Fix Pixi init race so camera transforms apply to the Pixi scene (prevents HTML overlays drifting from the map)
 - [x] Update seeded POI coordinates to improve default camera framing and reduce early-stage clutter in parity walkthroughs
 - [x] Keep Pixi text labels screen-sized (inverse-scale) and reduce agent name label clutter (focused-only)
+- [x] Add procedural biome tile textures + Pixi terrain tiling background to reduce “empty grass” feel
 
 ### M4: Motion + Timing Parity
 - [x] Framer Motion transitions for modal/tabs/panel/bubbles
