@@ -18,6 +18,7 @@ I must reference these for the authoritative plan/spec:
 - `docs/plans/2026-02-05-wave-2-qa-a11y-performance-log.md` — implementation log for QA/a11y/perf hardening
 - `docs/plans/2026-02-06-wave-3-map-declutter-log.md` — implementation log for map declutter/readability work
 - `docs/plans/2026-02-06-wave-4-terrain-richness-log.md` — implementation log for procedural terrain richness
+- `docs/plans/2026-02-06-wave-5-bubble-declutter-log.md` — implementation log for bubble declutter at hotspots
 - `docs/plans/2026-02-05-spectator-parity-qa-checklist.md` — parity QA checklist (automated + manual pass tracking)
 
 Execution-level translation of those docs:
@@ -249,6 +250,7 @@ Determinism checks:
   - Added procedural biome tile textures + Pixi base terrain tiling sprite; biome patches are now tiled (masked) instead of flat alpha circles
   - POI labels use the pixel font family (per design spec)
   - Agent name labels are focused-only (speech bubbles already include names)
+  - Bubble declutter: when zoomed out, solo bubbles group by nearest POI and selection prefers bubbles near viewport center
   - Updated parity screenshots (`npm run dev:parity:screenshots`)
   - Map zoom controls (+/−/reset) and a manual Center button
   - Leaderboard highlights the selected player; Enter selects the top search result

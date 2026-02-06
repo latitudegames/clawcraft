@@ -33,6 +33,8 @@ const PARTY_BUBBLE_MAX_WIDTH_PX = 240;
 const AGENT_CLUSTER_RADIUS_WORLD = 10;
 const PARTY_HOVER_FAN_OUT_RADIUS_WORLD = 12;
 const POI_HIT_RADIUS_PX = 24;
+const LOCATION_GROUPING_MAX_SCALE = 1.35;
+const LOCATION_GROUPING_RADIUS_WORLD = 72;
 
 const BIOME_TILE_SIZE = 64;
 const TERRAIN_PADDING_WORLD = 900;
@@ -1089,13 +1091,79 @@ export function WorldMap({
     const bubbleLimit = bubbleLimitForScale(camera.scale, Boolean(focusedCandidate));
     if (bubbleLimit === 0) return [];
 
-    const focusGroupId = focusedCandidate ? focusedCandidate.run_id ?? focusedCandidate.username : null;
+    const candidateByUsername = new Map(allCandidates.map((a) => [a.username, a]));
+    const enableLocationGrouping = camera.scale < LOCATION_GROUPING_MAX_SCALE;
+    const groupingRadius2 = LOCATION_GROUPING_RADIUS_WORLD * LOCATION_GROUPING_RADIUS_WORLD;
+    const poiPoints = enableLocationGrouping
+      ? world.locations.filter((l) => typeof l.x === "number" && typeof l.y === "number")
+      : [];
+
+    // When zoomed out, group solo non-traveling bubbles by nearest POI to reduce clutter at hotspots.
+    const nearestPoiByUsername = new Map<string, { id: string; dist2: number }>();
+    if (poiPoints.length > 0) {
+      for (const a of allCandidates) {
+        if (a.run_id) continue;
+        if (a.traveling) continue;
+        const offset = displayOffsets.get(a.username);
+        const ax = (a.x as number) + (offset?.dx ?? 0);
+        const ay = (a.y as number) + (offset?.dy ?? 0);
+
+        let picked: { id: string; dist2: number } | null = null;
+        for (const l of poiPoints) {
+          const dx = (l.x as number) - ax;
+          const dy = (l.y as number) - ay;
+          const dist2 = dx * dx + dy * dy;
+          if (!picked || dist2 < picked.dist2) picked = { id: l.id, dist2 };
+        }
+
+        if (picked) nearestPoiByUsername.set(a.username, picked);
+      }
+    }
+
+    const poiCounts = new Map<string, number>();
+    for (const picked of nearestPoiByUsername.values()) {
+      if (picked.dist2 > groupingRadius2) continue;
+      poiCounts.set(picked.id, (poiCounts.get(picked.id) ?? 0) + 1);
+    }
+
+    const groupCandidates = allCandidates.map((a) => {
+      if (a.run_id) return { username: a.username, run_id: a.run_id };
+      if (!enableLocationGrouping || a.traveling) return { username: a.username, run_id: null as string | null };
+
+      const nearest = nearestPoiByUsername.get(a.username) ?? null;
+      if (!nearest || nearest.dist2 > groupingRadius2) return { username: a.username, run_id: null as string | null };
+      if ((poiCounts.get(nearest.id) ?? 0) <= 1) return { username: a.username, run_id: null as string | null };
+
+      return { username: a.username, run_id: `poi:${nearest.id}` };
+    });
+
+    const groupCandidateByUsername = new Map(groupCandidates.map((c) => [c.username, c]));
+    const focusGroupId = focusUsername ? groupCandidateByUsername.get(focusUsername)?.run_id ?? focusUsername : null;
+
     const groups = groupBubbleCandidates({
-      candidates: allCandidates.map((a) => ({ username: a.username, run_id: a.run_id })),
+      candidates: groupCandidates,
       focusUsername
     });
-    const selectedGroups = selectBubbleGroups({ groups, bubbleLimit, focusUsername });
-    const candidateByUsername = new Map(allCandidates.map((a) => [a.username, a]));
+
+    // Prefer bubbles near the viewport center for general readability.
+    const centerWorldX = (effectiveViewport.width / 2 - camera.x) / camera.scale;
+    const centerWorldY = (size.height / 2 - camera.y) / camera.scale;
+    const groupDist2 = (group: (typeof groups)[number]) => {
+      const a = candidateByUsername.get(group.representative);
+      if (!a || typeof a.x !== "number" || typeof a.y !== "number") return Number.POSITIVE_INFINITY;
+      const offset = displayOffsets.get(a.username);
+      const ax = (a.x as number) + (offset?.dx ?? 0);
+      const ay = (a.y as number) + (offset?.dy ?? 0);
+      const dx = ax - centerWorldX;
+      const dy = ay - centerWorldY;
+      return dx * dx + dy * dy;
+    };
+
+    const sortedGroups = groups
+      .slice()
+      .sort((a, b) => groupDist2(a) - groupDist2(b) || a.sortKey.localeCompare(b.sortKey));
+
+    const selectedGroups = selectBubbleGroups({ groups: sortedGroups, bubbleLimit, focusUsername });
 
     const bubbleInputs = selectedGroups
       .map((group) => {
@@ -1182,7 +1250,18 @@ export function WorldMap({
       memberSummary: string | null;
       maxWidth: number;
     }>;
-  }, [camera.scale, camera.x, camera.y, displayOffsets, effectiveViewport.width, focusUsername, size.height, size.width, world.agents]);
+  }, [
+    camera.scale,
+    camera.x,
+    camera.y,
+    displayOffsets,
+    effectiveViewport.width,
+    focusUsername,
+    size.height,
+    size.width,
+    world.agents,
+    world.locations
+  ]);
 
   const tooltipPoi = useMemo(() => {
     const activeId = pinnedPoiId ?? hoverPoiId;

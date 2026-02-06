@@ -51,6 +51,7 @@ If conflicts appear, update this tracker with the decision and link the doc chan
 - [x] Update seeded POI coordinates to improve default camera framing and reduce early-stage clutter in parity walkthroughs
 - [x] Keep Pixi text labels screen-sized (inverse-scale) and reduce agent name label clutter (focused-only)
 - [x] Add procedural biome tile textures + Pixi terrain tiling background to reduce “empty grass” feel
+- [x] Reduce bubble noise when zoomed out by grouping solo bubbles by nearest POI and selecting bubbles near the viewport center
 
 ### M4: Motion + Timing Parity
 - [x] Framer Motion transitions for modal/tabs/panel/bubbles
