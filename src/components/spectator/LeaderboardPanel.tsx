@@ -177,7 +177,11 @@ export function LeaderboardPanel(props: { onSelectPlayer?: (username: string) =>
                           <div className="cc-font-rank text-ink-muted">{r.rank}</div>
                           <div className="min-w-0 truncate">
                             {r.username}
-                            {r.guild_tag ? <span className="ml-2 text-[11px] text-ink-muted">[{r.guild_tag}]</span> : null}
+                            {r.guild_tag ? (
+                              <span className="ml-2 text-[10px] font-semibold text-ink-muted tracking-[0.05em]">
+                                [{r.guild_tag}]
+                              </span>
+                            ) : null}
                           </div>
                           <div className="cc-font-rank text-right">{r.level}</div>
                         </button>

@@ -314,7 +314,9 @@ export function AgentModal({ username, onClose }: { username: string; onClose: (
             <div className="min-w-0">
               <div id={titleId} className="truncate text-lg font-bold text-ink-brown">
                 {username}
-                {guildLabel ? <span className="ml-2 text-sm font-semibold text-ink-muted">{guildLabel}</span> : null}
+                {guildLabel ? (
+                  <span className="ml-2 text-[12px] font-semibold text-ink-muted tracking-[0.05em]">{guildLabel}</span>
+                ) : null}
               </div>
               {agent ? (
                 <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs opacity-80">
