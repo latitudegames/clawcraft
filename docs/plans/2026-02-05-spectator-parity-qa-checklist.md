@@ -54,14 +54,15 @@ Scope: Spectator UI parity vs:
 - [x] Prod-safe world-state polling defaults with dev override
 - [x] World-state endpoint cache + in-flight dedupe
 - [x] Build and runtime stability under current test suite
-- [ ] Manual interaction profiling under demo population load
+- [x] World-state perf baseline recorded (`npm run dev:perf:world-state`)
+- [ ] Manual interaction profiling under demo population load (frontend)
 
 ## Remaining Gaps
 
-1. Map visuals are still short of spec target (procedural biome tiling helps, but we still need decorative overlays + stronger terrain variety and lower bubble crowding at dense hotspots).
-2. Typography and spacing still need a tighter pass for parity-level polish.
-3. Accessibility contrast and screen-reader pass remains to be done.
-4. Optional polish (ambient effects) is intentionally deferred until parity QA closes.
+1. Typography/spacing still need a tighter pass for parity-level polish (leaderboard + modal).
+2. Screen-reader navigation walkthrough remains to be done (beyond semantics smoke).
+3. Manual interaction profiling under demo population load is still pending (frontend performance).
+4. Optional ambient effects (particles/day-night palette shift) are intentionally deferred until parity QA closes.
 
 ## QA Artifacts
 

@@ -72,6 +72,7 @@ If conflicts appear, update this tracker with the decision and link the doc chan
 - [x] Screen-reader semantics smoke (role-based checks; `npm run dev:sr`)
 - [ ] Screen-reader navigation walkthrough
 - [ ] Performance pass for map responsiveness and network cadence
+- [x] World-state perf harness added and baseline recorded (`npm run dev:perf:world-state`)
 
 ## Decision Log
 
