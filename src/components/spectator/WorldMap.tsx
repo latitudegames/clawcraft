@@ -280,7 +280,7 @@ function fitViewportCamera(args: {
     viewport: effectiveViewport,
     padding: args.padding
   });
-  const scale = clamp(fit.scale, 0.5, 6);
+  const scale = clamp(fit.scale, MIN_SCALE, 6);
   if (scale === fit.scale) return fit;
 
   const cx = (args.bounds.minX + args.bounds.maxX) / 2;
@@ -1158,7 +1158,7 @@ export function WorldMap({
       const isActive = Boolean(activePoiId && activePoiId === l.id);
       const showAtScale =
         l.type === "major_city" || l.type === "landmark"
-          ? 0.5
+          ? 0.35
           : l.type === "town"
             ? 0.95
             : 1.25;
