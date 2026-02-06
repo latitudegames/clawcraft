@@ -24,7 +24,7 @@ Scope: Spectator UI parity vs:
 - [x] POI hover/tap tooltip behavior
 - [x] Zoom controls and center-focus control behavior
 - [x] Manual screenshot comparison run captured
-- [ ] Typography/spacing fidelity polish pass
+- [x] Typography/spacing fidelity polish pass
 
 ## Mobile Parity Checklist
 

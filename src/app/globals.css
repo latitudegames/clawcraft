@@ -58,6 +58,33 @@ body {
     inset 0 0 20px rgba(74, 55, 40, 0.05);
 }
 
+.cc-parchment-scroll {
+  position: relative;
+  isolation: isolate;
+}
+
+/* Subtle "torn scroll" edge detail used for the leaderboard panel only. */
+.cc-parchment-scroll::before {
+  content: "";
+  position: absolute;
+  left: -2px;
+  top: -2px;
+  bottom: -2px;
+  width: 18px;
+  pointer-events: none;
+  opacity: 0.8;
+  background:
+    linear-gradient(to right, rgba(212, 196, 168, 0.95), rgba(245, 230, 200, 0)),
+    radial-gradient(circle at 0 8px, rgba(74, 55, 40, 0.14) 0 2px, transparent 3px),
+    radial-gradient(circle at 0 24px, rgba(74, 55, 40, 0.09) 0 2px, transparent 3px);
+  background-size: 100% 100%, 18px 32px, 18px 32px;
+  background-repeat: no-repeat, repeat-y, repeat-y;
+  mix-blend-mode: multiply;
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+  z-index: 0;
+}
+
 .cc-terrain-grass {
   background-color: var(--grass-light);
   background-image:

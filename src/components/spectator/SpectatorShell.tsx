@@ -133,7 +133,7 @@ export function SpectatorShell() {
         ) : null}
       </div>
 
-      <aside className="cc-parchment absolute right-0 top-0 z-30 hidden h-full w-[320px] rounded-l-lg rounded-r-none border-r-0 p-3 lg:block">
+      <aside className="cc-parchment cc-parchment-scroll absolute right-0 top-0 z-30 hidden h-full w-[320px] rounded-l-lg rounded-r-none border-r-0 p-3 lg:block">
         <LeaderboardPanel selectedPlayer={selectedAgent} onSelectPlayer={onSelectAgent} />
       </aside>
 
@@ -151,7 +151,7 @@ export function SpectatorShell() {
             <motion.aside
               id="mobile-leaderboard-panel"
               ref={mobileDrawerRef}
-              className="cc-parchment fixed right-0 top-0 z-50 h-full w-[88vw] max-w-[340px] rounded-l-lg rounded-r-none border-r-0 p-3 lg:hidden"
+              className="cc-parchment cc-parchment-scroll fixed right-0 top-0 z-50 h-full w-[88vw] max-w-[340px] rounded-l-lg rounded-r-none border-r-0 p-3 lg:hidden"
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}

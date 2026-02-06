@@ -126,8 +126,7 @@ export function LeaderboardPanel(props: { onSelectPlayer?: (username: string) =>
         </button>
       </div>
 
-      <div className="relative mt-2 flex-1 overflow-hidden rounded-md border border-parchment-dark/70 bg-white/65">
-        <div className="pointer-events-none absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-parchment-dark/50 via-parchment-dark/25 to-parchment-dark/40" />
+      <div className="relative mt-2 flex-1 overflow-hidden rounded-md border border-parchment-dark/70 bg-parchment-bg/55">
         {isLoading ? (
           <div className="p-4 text-sm opacity-80">Loading…</div>
         ) : error ? (
@@ -149,7 +148,7 @@ export function LeaderboardPanel(props: { onSelectPlayer?: (username: string) =>
               transition={{ duration: 0.15, ease: "easeOut" }}
             >
               <div className="w-full text-xs">
-                <div className="sticky top-0 grid grid-cols-[40px_1fr_80px] bg-white/90 px-3 py-2 text-left text-ink-muted">
+                <div className="sticky top-0 grid grid-cols-[40px_1fr_80px] bg-parchment-bg/90 px-3 py-2 text-left text-ink-muted">
                   <div className="cc-font-rank">#</div>
                   <div>{tab === "players" ? "Player" : "Guild"}</div>
                   <div className="text-right">{tab === "players" ? "Level" : "Gold"}</div>

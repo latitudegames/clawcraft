@@ -6,7 +6,7 @@ import { useEffect, useId, useRef, useState } from "react";
 
 import { useAgentPublic } from "@/lib/client/hooks/useAgentPublic";
 import { agentSpriteUrlForUsername } from "@/lib/ui/sprites";
-import { SKILLS } from "@/types/skills";
+import type { Skill } from "@/types/skills";
 
 type TabKey = "overview" | "skills" | "equipment" | "journey";
 
@@ -16,6 +16,23 @@ const TABS: Array<{ key: TabKey; label: string }> = [
   { key: "equipment", label: "Equipment" },
   { key: "journey", label: "Journey" }
 ];
+
+const SKILL_GROUPS: Array<{ label: string; skills: Skill[] }> = [
+  { label: "Combat", skills: ["melee", "ranged", "unarmed"] },
+  { label: "Magic", skills: ["necromancy", "elemental", "enchantment", "healing", "illusion", "summoning"] },
+  { label: "Subterfuge + Social", skills: ["stealth", "lockpicking", "poison", "persuasion", "deception", "seduction"] }
+];
+
+const EQUIPMENT_SLOTS = ["head", "chest", "legs", "boots", "right_hand", "left_hand"] as const;
+type EquipmentSlot = (typeof EQUIPMENT_SLOTS)[number];
+const EQUIPMENT_SLOT_LABEL: Record<EquipmentSlot, string> = {
+  head: "Head",
+  chest: "Chest",
+  legs: "Legs",
+  boots: "Boots",
+  right_hand: "R Hand",
+  left_hand: "L Hand"
+};
 
 export function AgentModal({ username, onClose }: { username: string; onClose: () => void }) {
   const { data, isLoading, error } = useAgentPublic(username);
@@ -160,19 +177,37 @@ export function AgentModal({ username, onClose }: { username: string; onClose: (
     if (tab === "skills") {
       return (
         <div>
-          <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Skills</div>
-          <div className="grid grid-cols-3 gap-2 text-xs">
-            {SKILLS.map((skill) => {
-              const value = agent.skills[skill] ?? 0;
-              return (
-                <div key={skill} className="rounded border border-parchment-dark/35 bg-white/70 px-2 py-1">
-                  <div className="truncate text-ink-muted">{skill.replace(/_/g, " ")}</div>
-                  <div className="cc-font-rank text-sm font-semibold">{value}</div>
-                </div>
-              );
-            })}
+          <div className="mb-3 flex items-baseline justify-between gap-2">
+            <div className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Skills</div>
+            <div className={`text-xs ${agent.unspent_skill_points > 0 ? "text-ink-brown" : "text-ink-muted"}`}>
+              Unspent points:{" "}
+              <span className={agent.unspent_skill_points > 0 ? "cc-font-rank font-semibold" : "cc-font-rank"}>
+                {agent.unspent_skill_points}
+              </span>
+            </div>
           </div>
-          <div className="mt-3 text-xs text-ink-muted">Unspent skill points: {agent.unspent_skill_points}</div>
+
+          <div className="grid gap-3 md:grid-cols-3">
+            {SKILL_GROUPS.map((group) => (
+              <div key={group.label} className="rounded-md border border-parchment-dark/45 bg-white/60 p-2">
+                <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-muted">{group.label}</div>
+                <div className="space-y-1 text-xs">
+                  {group.skills.map((skill) => {
+                    const value = agent.skills[skill] ?? 0;
+                    return (
+                      <div
+                        key={skill}
+                        className="flex items-center justify-between gap-2 rounded border border-parchment-dark/35 bg-white/70 px-2 py-1"
+                      >
+                        <div className="min-w-0 truncate text-ink-muted">{skill.replace(/_/g, " ")}</div>
+                        <div className="cc-font-rank shrink-0 text-sm font-semibold">{value}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       );
     }
@@ -182,18 +217,21 @@ export function AgentModal({ username, onClose }: { username: string; onClose: (
         <div className="space-y-4 text-xs">
           <div>
             <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Equipment</div>
-            <div className="grid grid-cols-2 gap-2">
-              {Object.entries(agent.equipment).map(([slot, item]) => (
-                <div
-                  key={slot}
-                  className={`rounded border px-2 py-2 ${
-                    item ? "border-parchment-dark/40 bg-white/75" : "border-dashed border-parchment-dark/60 bg-white/50"
-                  }`}
-                >
-                  <div className="text-ink-muted">{slot.replace(/_/g, " ")}</div>
-                  <div className="mt-1 truncate font-semibold">{item ? item.name : "Empty"}</div>
-                </div>
-              ))}
+            <div className="grid grid-cols-3 gap-2">
+              {EQUIPMENT_SLOTS.map((slot) => {
+                const item = agent.equipment[slot] ?? null;
+                return (
+                  <div
+                    key={slot}
+                    className={`rounded border px-2 py-2 ${
+                      item ? "border-parchment-dark/40 bg-white/75" : "border-dotted border-parchment-dark/60 bg-white/50"
+                    }`}
+                  >
+                    <div className="text-ink-muted">{EQUIPMENT_SLOT_LABEL[slot]}</div>
+                    <div className="mt-1 truncate font-semibold">{item ? item.name : "Empty"}</div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -254,7 +292,7 @@ export function AgentModal({ username, onClose }: { username: string; onClose: (
         ref={dialogRef}
         tabIndex={-1}
         role="document"
-        className="cc-parchment w-full max-h-[88vh] overflow-hidden rounded-t-2xl border-2 border-parchment-dark p-4 shadow-xl md:max-w-2xl md:rounded-lg md:p-5"
+        className="cc-parchment w-full max-h-[88vh] overflow-hidden rounded-t-2xl border-2 border-parchment-dark p-4 shadow-xl md:max-w-[420px] md:rounded-lg md:p-5"
         initial={{ opacity: 0, y: 24, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 16, scale: 0.98 }}

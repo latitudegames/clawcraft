@@ -68,6 +68,7 @@ If conflicts appear, update this tracker with the decision and link the doc chan
 - [x] Automated a11y smoke (axe-core via Playwright) green (`npm run dev:a11y`)
 - [x] Desktop parity screenshot walkthrough captured
 - [x] Mobile parity screenshot walkthrough captured
+- [x] Typography/spacing fidelity polish pass (leaderboard + agent card)
 - [x] Accessibility contrast pass (axe-core across baseline + drawer + modal; see `docs/plans/2026-02-05-spectator-parity-qa-checklist.md`)
 - [x] Screen-reader semantics smoke (role-based checks; `npm run dev:sr`)
 - [ ] Screen-reader navigation walkthrough
