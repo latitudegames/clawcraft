@@ -40,9 +40,20 @@ Scope: scale the Clawcraft world from the demo 5-POI map to a kingdom-scale map 
 
 To avoid “no icons except 5” when scaling to 100+ POIs, the spectator map uses:
 - Bespoke sprite icons for the canonical 5 POIs (if assets exist)
-- Generic pixel-style icons per `LocationType` (generated in-browser)
+- Generic POI icon sprites per `LocationType`
+  - Uses PNGs when available: `public/assets/poi/icon-*.png`
+  - Falls back to in-browser procedural pixel icons if missing
 
 Code: `src/components/spectator/WorldMap.tsx`
+
+### Biomes + decoration overlays
+
+To align with the spec’s “hybrid approach” (tile base + overlay sprites), the spectator map renders:
+- A code-generated tiled base terrain texture (plains)
+- A biome patch around each POI (tiled pixel texture per biome tag)
+- Transparent overlay sprites around each POI (biome-specific decoration clusters)
+  - Current assets: `public/assets/decor/decor-*.png`
+  - Loaded best-effort; falls back to procedural decor if an asset is missing
 
 ## Acceptance Criteria
 
@@ -58,8 +69,10 @@ Code: `src/components/spectator/WorldMap.tsx`
    - Road density: reduce long, overlapping cross-region routes.
    - Label thresholds: confirm desktop and mobile “default fit” shows the right subset.
 2. **Biome richness**
-   - Expand biome tags (if needed) with spec-aligned palette and procedural textures.
-   - Begin replacing procedural decorations with real overlay sprites per:
+   - Add 2-3 decoration overlay variants per biome and select deterministically per POI.
+   - Begin introducing a small set of “signature” POI sprites (10-15) to break up repetition
+     - castles/ports/libraries/mines/ruins/shrines
+   - Continue replacing procedural overlays with real transparent PNG overlays per:
      - `docs/plans/2026-02-04-visual-assets-pipeline.md`
 3. **Quality pass on POI naming + descriptions**
    - Add region flavor and “signature” landmarks (castle/library/port/etc).
@@ -67,4 +80,3 @@ Code: `src/components/spectator/WorldMap.tsx`
    - Re-run spectator perf harness under large-world baseline:
      - `/api/world-state?synth_agents=2000&synth_only=1`
      - `npm run dev:perf:map-render`
-

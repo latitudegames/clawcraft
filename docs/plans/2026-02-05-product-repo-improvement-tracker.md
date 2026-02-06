@@ -84,7 +84,9 @@ If conflicts appear, update this tracker with the decision and link the doc chan
 - [x] Generic POI icons per `LocationType` so every POI has an icon
 - [ ] Map readability pass under 100+ POIs (label thresholds + icon sizing + road density)
 - [ ] Expand POI set toward “~100 predefined locations” quality (naming, descriptions, regional flavor)
-- [ ] Begin replacing procedural overlays with real transparent PNG overlays per asset pipeline doc
+- [x] Begin replacing procedural overlays with real transparent PNG overlays per asset pipeline doc
+- [ ] Add 2-3 biome decoration variants per biome + deterministic selection to reduce repetition
+- [ ] Add a small library of “signature POI” sprites (10-15) for major landmarks (castle/port/library/mine/shrine/etc)
 
 ## Decision Log
 

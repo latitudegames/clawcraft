@@ -339,6 +339,23 @@ const GENERIC_POI_ICON_KEYS = ["icon-major-city", "icon-town", "icon-dungeon", "
 
 type PoiIconKey = (typeof UNIQUE_POI_ICON_KEYS)[number] | (typeof GENERIC_POI_ICON_KEYS)[number];
 
+const BIOME_TAGS = ["plains", "forest", "cave", "ruins", "mountain", "snow", "water", "desert"] as const;
+type BiomeTag = (typeof BIOME_TAGS)[number];
+
+// Hybrid map approach: code-generated base terrain + AI-generated overlay clusters.
+// We keep these generic per biome initially (instead of bespoke per-POI art) to scale
+// to 100+ locations while maintaining variety and a consistent look.
+const DECOR_ASSET_KEYS_BY_BIOME: Record<BiomeTag, string[]> = {
+  plains: ["decor-plains-flowers-a"],
+  forest: ["decor-forest-pines-a"],
+  cave: ["decor-cave-stalagmites-a"],
+  ruins: ["decor-ruins-columns-a"],
+  mountain: ["decor-mountain-rocks-a"],
+  snow: ["decor-snow-pines-a"],
+  water: ["decor-water-lilies-a"],
+  desert: ["decor-desert-cactus-a"]
+};
+
 function slugifyPoiName(name: string): string {
   return name
     .toLowerCase()
@@ -492,15 +509,17 @@ type PixiScene = {
   app: Application;
   world: Container;
   terrainTiles: Container;
+  terrainDecor: Container;
   baseTerrain: TilingSprite | null;
   biomeTextures: Map<string, Texture>;
-  decorationTextures: Map<string, Texture>;
+  decorationTexturesByBiome: Map<string, Texture[]>;
   decorationsByLocationId: Map<
     string,
     {
       sprites: Sprite[];
       radius: number;
       biomeTag: string | null;
+      assetsVersion: number;
     }
   >;
   terrainPatchesByLocationId: Map<
@@ -687,6 +706,7 @@ export function WorldMap({
 
       const worldContainer = new Container();
       const terrainTiles = new Container();
+      const terrainDecor = new Container();
       const terrainGraphics = new Graphics();
       const pathGraphics = new Graphics();
       const poiMarkerGraphics = new Graphics();
@@ -697,6 +717,7 @@ export function WorldMap({
       const agentLabels = new Container();
 
       worldContainer.addChild(terrainTiles);
+      worldContainer.addChild(terrainDecor);
       worldContainer.addChild(terrainGraphics);
       worldContainer.addChild(pathGraphics);
       worldContainer.addChild(poiMarkerGraphics);
@@ -711,7 +732,7 @@ export function WorldMap({
       const agentTextures = new Map<AgentSpriteKey, Texture>();
       const poiTextures = new Map<PoiIconKey, Texture>();
       const biomeTextures = new Map<string, Texture>();
-      const decorationTextures = new Map<string, Texture>();
+      const decorationTexturesByBiome = new Map<string, Texture[]>();
       const spritesByUsername = new Map<string, Sprite>();
       const poiSpritesByLocationId = new Map<string, Sprite>();
       const locationLabelsById = new Map<string, Text>();
@@ -721,6 +742,7 @@ export function WorldMap({
           sprites: Sprite[];
           radius: number;
           biomeTag: string | null;
+          assetsVersion: number;
         }
       >();
       const terrainPatchesByLocationId = new Map<
@@ -733,16 +755,16 @@ export function WorldMap({
         }
       >();
 
-      for (const tag of ["plains", "forest", "cave", "ruins", "mountain", "snow", "water", "desert"]) {
+      for (const tag of BIOME_TAGS) {
         const canvas = makeBiomeTileCanvas(tag);
         if (!canvas) continue;
         biomeTextures.set(tag, Texture.from(canvas));
       }
 
-      for (const tag of ["plains", "forest", "cave", "ruins", "mountain", "snow", "water", "desert"]) {
+      for (const tag of BIOME_TAGS) {
         const canvas = makeBiomeDecorationCanvas(tag);
         if (!canvas) continue;
-        decorationTextures.set(tag, Texture.from(canvas));
+        decorationTexturesByBiome.set(tag, [Texture.from(canvas)]);
       }
 
       for (const key of GENERIC_POI_ICON_KEYS) {
@@ -753,14 +775,16 @@ export function WorldMap({
 
       agentSprites.sortableChildren = true;
       poiSprites.sortableChildren = true;
+      terrainDecor.sortableChildren = true;
 
       pixi.current = {
         app,
         world: worldContainer,
         terrainTiles,
+        terrainDecor,
         baseTerrain: null,
         biomeTextures,
-        decorationTextures,
+        decorationTexturesByBiome,
         decorationsByLocationId,
         terrainPatchesByLocationId,
         terrainGraphics,
@@ -798,6 +822,30 @@ export function WorldMap({
           } catch {
             // Best-effort; keep using procedural markers when missing.
           }
+        }),
+        ...GENERIC_POI_ICON_KEYS.map(async (key) => {
+          try {
+            const texture = (await Assets.load(`/assets/poi/${key}.png`)) as Texture;
+            if (cancelled) return;
+            poiTextures.set(key, texture);
+          } catch {
+            // Best-effort; keep using procedural icon when missing.
+          }
+        }),
+        ...(Object.entries(DECOR_ASSET_KEYS_BY_BIOME) as Array<[BiomeTag, string[]]>).map(async ([tag, keys]) => {
+          const textures: Texture[] = [];
+          for (const key of keys) {
+            try {
+              const texture = (await Assets.load(`/assets/decor/${key}.png`)) as Texture;
+              if (cancelled) return;
+              textures.push(texture);
+            } catch {
+              // Best-effort; keep using procedural biome decorations when missing.
+            }
+          }
+
+          if (cancelled) return;
+          if (textures.length > 0) decorationTexturesByBiome.set(tag, textures);
         })
       ]).then(() => {
         if (cancelled) return;
@@ -1006,26 +1054,28 @@ export function WorldMap({
       scene.terrainGraphics.circle(l.x, l.y, Math.round(radius * 0.92)).stroke({ width: 6, color: colorForBiomeTag(biomeTag), alpha: 0.02 });
 
       // Biome decorations (very lightweight stand-in for the future asset overlay pipeline).
-      const decorTexture = scene.decorationTextures.get(biomeTag) ?? scene.decorationTextures.get("plains") ?? null;
-      if (decorTexture) {
+      const decorTextures =
+        scene.decorationTexturesByBiome.get(biomeTag) ?? scene.decorationTexturesByBiome.get("plains") ?? null;
+      if (decorTextures && decorTextures.length > 0) {
         const baseCount =
           biomeTag === "forest"
-            ? 18
+            ? 24
             : biomeTag === "plains"
-              ? 12
+              ? 18
               : biomeTag === "water"
-                ? 8
+                ? 12
                 : biomeTag === "desert"
-                  ? 10
+                  ? 14
                   : biomeTag === "snow"
-                    ? 10
-                    : 14;
+                    ? 14
+                    : 18;
         const typeMultiplier = l.type === "major_city" ? 0.35 : l.type === "town" ? 0.55 : l.type === "landmark" ? 0.7 : 0.85;
         const desiredCount = Math.max(0, Math.round(baseCount * typeMultiplier));
 
         const existingDecor = scene.decorationsByLocationId.get(l.id) ?? null;
         const needsRebuild =
           !existingDecor ||
+          existingDecor.assetsVersion !== assetsVersion ||
           existingDecor.biomeTag !== biomeTag ||
           existingDecor.radius !== radius ||
           existingDecor.sprites.length !== desiredCount;
@@ -1039,19 +1089,22 @@ export function WorldMap({
           const sprites: Sprite[] = [];
           const decorRng = createRng(`clawcraft:decorations:${l.id}`);
           for (let i = 0; i < desiredCount; i++) {
-            const sprite = new Sprite(decorTexture);
+            const sprite = new Sprite(decorRng.pick(decorTextures));
             sprite.anchor.set(0.5, 0.5);
             sprite.alpha = 0.9;
 
             const angle = decorRng.float(0, Math.PI * 2);
             const dist = decorRng.float(radius * 0.45, radius * 0.98);
             sprite.position.set(l.x + Math.cos(angle) * dist, l.y + Math.sin(angle) * dist);
-            sprite.scale.set(decorRng.float(0.55, 0.9));
+            const s = decorRng.float(0.45, 0.8);
+            const flip = decorRng.int(0, 5) === 0;
+            sprite.scale.set(flip ? -s : s, s);
+            sprite.zIndex = sprite.y;
 
-            scene.terrainTiles.addChild(sprite);
+            scene.terrainDecor.addChild(sprite);
             sprites.push(sprite);
           }
-          scene.decorationsByLocationId.set(l.id, { sprites, radius, biomeTag });
+          scene.decorationsByLocationId.set(l.id, { sprites, radius, biomeTag, assetsVersion });
         }
       }
 
