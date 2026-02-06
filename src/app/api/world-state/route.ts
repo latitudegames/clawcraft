@@ -14,6 +14,7 @@ const COOLDOWN_MS = 12 * 60 * 60 * 1000;
 const STATUS_INTERVAL_MS = 30 * 60 * 1000;
 const STATUS_STEPS = 20;
 const WORLD_STATE_CACHE_TTL_MS = 1_000;
+const SYNTH_AGENT_MAX = 5_000;
 
 const worldStateCache = createAsyncTtlCache<WorldStateResponse>({ ttlMs: WORLD_STATE_CACHE_TTL_MS });
 const worldSkeletonCache = createAsyncTtlCache<WorldStateResponse>({ ttlMs: WORLD_STATE_CACHE_TTL_MS });
@@ -204,16 +205,20 @@ function parseBoolParam(params: URLSearchParams, key: string): boolean {
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const synthAgents = parseIntParam(searchParams, "synth_agents");
+  const synthAgentsRaw = parseIntParam(searchParams, "synth_agents");
+  const synthAgents = synthAgentsRaw !== null ? Math.max(0, Math.min(SYNTH_AGENT_MAX, synthAgentsRaw)) : null;
   const synthOnly = parseBoolParam(searchParams, "synth_only");
 
-  const state = synthOnly && DEV_CONFIG.DEV_MODE && synthAgents && synthAgents > 0
+  // Synthetic agent mode is meant for local profiling. Avoid exposing it on "forced" demo environments.
+  const allowSynth = DEV_CONFIG.DEV_MODE && !DEV_CONFIG.FORCED;
+
+  const state = synthOnly && allowSynth && synthAgents && synthAgents > 0
     ? await worldSkeletonCache.get(computeWorldSkeleton)
     : await worldStateCache.get(computeWorldState);
 
   // Dev-only load testing mode: append synthetic agents for stress testing Pixi + bubble overlay behavior.
   // Production should ignore these query params.
-  if (!DEV_CONFIG.DEV_MODE) return NextResponse.json(state);
+  if (!allowSynth) return NextResponse.json(state);
   if (!synthAgents || synthAgents <= 0) return NextResponse.json(state);
 
   const seed = searchParams.get("synth_seed") ?? undefined;
