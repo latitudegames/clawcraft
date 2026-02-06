@@ -476,12 +476,22 @@ const UNIQUE_POI_ICON_KEYS = [
 ] as const;
 const UNIQUE_POI_ICON_KEY_SET = new Set<string>(UNIQUE_POI_ICON_KEYS);
 
-const GENERIC_POI_ICON_KEYS = ["icon-major-city", "icon-town", "icon-dungeon", "icon-wild", "icon-landmark"] as const;
-
-type PoiIconKey = (typeof UNIQUE_POI_ICON_KEYS)[number] | (typeof GENERIC_POI_ICON_KEYS)[number];
-
 const BIOME_TAGS = ["plains", "forest", "cave", "ruins", "mountain", "snow", "water", "desert"] as const;
 type BiomeTag = (typeof BIOME_TAGS)[number];
+
+const BASE_GENERIC_POI_ICON_KEYS = ["icon-major-city", "icon-town", "icon-dungeon", "icon-wild", "icon-landmark"] as const;
+type BaseGenericPoiIconKey = (typeof BASE_GENERIC_POI_ICON_KEYS)[number];
+
+type BiomeGenericPoiIconKey = `icon-town-${BiomeTag}` | `icon-dungeon-${BiomeTag}` | `icon-wild-${BiomeTag}`;
+type GenericPoiIconKey = BaseGenericPoiIconKey | BiomeGenericPoiIconKey;
+
+const BIOME_GENERIC_POI_ICON_KEYS = BIOME_TAGS.flatMap((tag) => [`icon-town-${tag}`, `icon-dungeon-${tag}`, `icon-wild-${tag}`]) as
+  | BiomeGenericPoiIconKey[]
+  | readonly BiomeGenericPoiIconKey[];
+
+const GENERIC_POI_ICON_KEYS = [...BASE_GENERIC_POI_ICON_KEYS, ...BIOME_GENERIC_POI_ICON_KEYS] as const satisfies readonly GenericPoiIconKey[];
+
+type PoiIconKey = (typeof UNIQUE_POI_ICON_KEYS)[number] | GenericPoiIconKey;
 
 // Hybrid map approach: code-generated base terrain + AI-generated overlay clusters.
 // We keep these generic per biome initially (instead of bespoke per-POI art) to scale
@@ -575,11 +585,30 @@ function slugifyPoiName(name: string): string {
     .replace(/(^-|-$)+/g, "");
 }
 
-function iconKeyForLocation(loc: { name: string; type: string }): PoiIconKey {
+function iconKeyForLocation(loc: { name: string; type: string; biome_tag?: string | null }): PoiIconKey {
   const slug = slugifyPoiName(loc.name);
   if (UNIQUE_POI_ICON_KEY_SET.has(slug)) return slug as PoiIconKey;
 
+  const biomeTag = (BIOME_TAGS as readonly string[]).includes(loc.biome_tag ?? "") ? (loc.biome_tag as BiomeTag) : "plains";
+
   switch (loc.type) {
+    case "major_city":
+      return "icon-major-city";
+    case "town":
+      return `icon-town-${biomeTag}`;
+    case "dungeon":
+      return `icon-dungeon-${biomeTag}`;
+    case "wild":
+      return `icon-wild-${biomeTag}`;
+    case "landmark":
+      return "icon-landmark";
+    default:
+      return `icon-town-${biomeTag}`;
+  }
+}
+
+function fallbackIconKeyForLocationType(type: string): BaseGenericPoiIconKey {
+  switch (type) {
     case "major_city":
       return "icon-major-city";
     case "town":
@@ -595,7 +624,7 @@ function iconKeyForLocation(loc: { name: string; type: string }): PoiIconKey {
   }
 }
 
-function makeGenericPoiIconCanvas(key: (typeof GENERIC_POI_ICON_KEYS)[number]): HTMLCanvasElement | null {
+function makeGenericPoiIconCanvas(key: BaseGenericPoiIconKey): HTMLCanvasElement | null {
   if (typeof document === "undefined") return null;
 
   const canvas = document.createElement("canvas");
@@ -988,7 +1017,7 @@ export function WorldMap({
         decorationTexturesByBiome.set(tag, [Texture.from(canvas)]);
       }
 
-      for (const key of GENERIC_POI_ICON_KEYS) {
+      for (const key of BASE_GENERIC_POI_ICON_KEYS) {
         const canvas = makeGenericPoiIconCanvas(key);
         if (!canvas) continue;
         poiTextures.set(key, Texture.from(canvas));
@@ -1545,7 +1574,7 @@ export function WorldMap({
       scene.poiMarkerGraphics.circle(l.x, l.y + 10, 12).fill({ color: 0x000000, alpha: 0.1 });
 
       const poiKey = iconKeyForLocation(l);
-      const texture = scene.poiTextures.get(poiKey);
+      const texture = scene.poiTextures.get(poiKey) ?? scene.poiTextures.get(fallbackIconKeyForLocationType(l.type)) ?? null;
 
       if (texture) {
         const existing = scene.poiSpritesByLocationId.get(l.id) ?? null;
