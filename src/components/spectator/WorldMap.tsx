@@ -16,10 +16,14 @@ import { computeRoadPolyline } from "@/lib/ui/roads";
 import type { AgentSpriteKey } from "@/lib/ui/sprites";
 import { AGENT_SPRITE_KEYS, agentSpriteKeyForUsername } from "@/lib/ui/sprites";
 import { createRng } from "@/lib/utils/rng";
-import type { WorldStateResponse } from "@/types/world-state";
+import type { WorldStateLocation, WorldStateResponse } from "@/types/world-state";
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
+}
+
+function mod(n: number, m: number) {
+  return ((n % m) + m) % m;
 }
 
 const MIN_SCALE = 0.35;
@@ -38,6 +42,8 @@ const LOCATION_GROUPING_RADIUS_WORLD = 72;
 
 const BIOME_TILE_SIZE = 64;
 const TERRAIN_PADDING_WORLD = 900;
+const BIOME_FIELD_MIN_PIXEL_SIZE_WORLD = 8;
+const BIOME_FIELD_MAX_DIM_PX = 2048;
 
 function cssVar(name: string): string | null {
   if (typeof window === "undefined") return null;
@@ -260,6 +266,123 @@ function makeBiomeDecorationCanvas(tag: string): HTMLCanvasElement | null {
     }
   }
 
+  return canvas;
+}
+
+function hashWorldLocationsForBiomeField(locations: WorldStateLocation[]): number {
+  // Stable uint32 hash for deciding when the biome field texture must be regenerated.
+  let h = 2166136261;
+  for (const l of locations) {
+    if (typeof l.x !== "number" || typeof l.y !== "number") continue;
+    const s = `${l.id}:${l.biome_tag ?? ""}:${Math.round(l.x)}:${Math.round(l.y)}`;
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+  }
+  return h >>> 0;
+}
+
+function hash2DToUnitFloat(x: number, y: number, seed: number): number {
+  // Fast deterministic 0..1 hash noise for boundary jitter.
+  let h = seed >>> 0;
+  h = Math.imul(h ^ (x >>> 0), 0x9e3779b1);
+  h = Math.imul(h ^ (y >>> 0), 0x85ebca6b);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+
+function makeBiomeFieldCanvas(args: {
+  locations: WorldStateLocation[];
+  terrain: { x: number; y: number; width: number; height: number };
+  pixelSizeWorld: number;
+  pixelWidth: number;
+  pixelHeight: number;
+}): HTMLCanvasElement | null {
+  if (typeof document === "undefined") return null;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = args.pixelWidth;
+  canvas.height = args.pixelHeight;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) return null;
+
+  const pointsByBiome = new Map<BiomeTag, Array<{ x: number; y: number }>>();
+  for (const tag of BIOME_TAGS) pointsByBiome.set(tag, []);
+
+  for (const l of args.locations) {
+    if (typeof l.x !== "number" || typeof l.y !== "number") continue;
+    const tag = (BIOME_TAGS as readonly string[]).includes(l.biome_tag ?? "") ? (l.biome_tag as BiomeTag) : "plains";
+    pointsByBiome.get(tag)?.push({ x: l.x, y: l.y });
+  }
+
+  const tileDataByBiome = new Map<BiomeTag, { data: Uint8ClampedArray; ox: number; oy: number }>();
+  for (const tag of BIOME_TAGS) {
+    const tile = makeBiomeTileCanvas(tag) ?? makeBiomeTileCanvas("plains");
+    if (!tile) continue;
+    const tctx = tile.getContext("2d", { willReadFrequently: true });
+    if (!tctx) continue;
+    const img = tctx.getImageData(0, 0, BIOME_TILE_SIZE, BIOME_TILE_SIZE);
+    const rng = createRng(`clawcraft:biome-field-tile:${tag}`);
+    tileDataByBiome.set(tag, { data: img.data, ox: rng.int(0, BIOME_TILE_SIZE - 1), oy: rng.int(0, BIOME_TILE_SIZE - 1) });
+  }
+
+  const img = ctx.createImageData(args.pixelWidth, args.pixelHeight);
+  const data = img.data;
+  const noiseSeed = createRng("clawcraft:biome-field-noise").int(1, 0x7fffffff);
+
+  for (let py = 0; py < args.pixelHeight; py++) {
+    const worldY = args.terrain.y + (py + 0.5) * args.pixelSizeWorld;
+    for (let px = 0; px < args.pixelWidth; px++) {
+      const worldX = args.terrain.x + (px + 0.5) * args.pixelSizeWorld;
+
+      let bestTag: BiomeTag = "plains";
+      let bestScore = Number.POSITIVE_INFINITY;
+
+      // Assign the biome based on the *nearest POI of each biome*.
+      // This keeps POIs in the right biome while still allowing large contiguous regions
+      // when POIs are clustered by biome.
+      for (const tag of BIOME_TAGS) {
+        const pts = pointsByBiome.get(tag);
+        if (!pts || pts.length === 0) continue;
+        let best = Number.POSITIVE_INFINITY;
+        for (const p of pts) {
+          const dx = worldX - p.x;
+          const dy = worldY - p.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < best) best = d2;
+        }
+
+        // Small boundary roughness so regions don't look like perfect distance fields.
+        const jitter = 1 + (hash2DToUnitFloat(px, py, noiseSeed) - 0.5) * 0.18;
+        const score = best * jitter;
+        if (score < bestScore) {
+          bestScore = score;
+          bestTag = tag;
+        }
+      }
+
+      const tile = tileDataByBiome.get(bestTag) ?? tileDataByBiome.get("plains") ?? null;
+      const outIdx = (py * args.pixelWidth + px) * 4;
+      if (!tile) {
+        data[outIdx] = 126;
+        data[outIdx + 1] = 200;
+        data[outIdx + 2] = 80;
+        data[outIdx + 3] = 255;
+        continue;
+      }
+
+      const tx = mod(Math.floor(worldX) + tile.ox, BIOME_TILE_SIZE);
+      const ty = mod(Math.floor(worldY) + tile.oy, BIOME_TILE_SIZE);
+      const tileIdx = (ty * BIOME_TILE_SIZE + tx) * 4;
+      data[outIdx] = tile.data[tileIdx] ?? 0;
+      data[outIdx + 1] = tile.data[tileIdx + 1] ?? 0;
+      data[outIdx + 2] = tile.data[tileIdx + 2] ?? 0;
+      data[outIdx + 3] = 255;
+    }
+  }
+
+  ctx.putImageData(img, 0, 0);
   return canvas;
 }
 
@@ -511,6 +634,9 @@ type PixiScene = {
   terrainTiles: Container;
   terrainDecor: Container;
   baseTerrain: TilingSprite | null;
+  biomeField: Sprite | null;
+  biomeFieldKey: string | null;
+  biomeFieldTexture: Texture | null;
   biomeTextures: Map<string, Texture>;
   decorationTexturesByBiome: Map<string, Texture[]>;
   decorationsByLocationId: Map<
@@ -783,6 +909,9 @@ export function WorldMap({
         terrainTiles,
         terrainDecor,
         baseTerrain: null,
+        biomeField: null,
+        biomeFieldKey: null,
+        biomeFieldTexture: null,
         biomeTextures,
         decorationTexturesByBiome,
         decorationsByLocationId,
@@ -944,6 +1073,58 @@ export function WorldMap({
     const terrainWidth = Math.max(1, b.maxX - b.minX + TERRAIN_PADDING_WORLD * 2);
     const terrainHeight = Math.max(1, b.maxY - b.minY + TERRAIN_PADDING_WORLD * 2);
 
+    // Macro biome background so regions read at default zoom.
+    // This is intentionally low-res and scaled with nearest-neighbor to feel like a tilemap.
+    const layoutHash = hashWorldLocationsForBiomeField(world.locations);
+    let fieldPixelSizeWorld = BIOME_FIELD_MIN_PIXEL_SIZE_WORLD;
+    let fieldPixelWidth = Math.max(1, Math.ceil(terrainWidth / fieldPixelSizeWorld));
+    let fieldPixelHeight = Math.max(1, Math.ceil(terrainHeight / fieldPixelSizeWorld));
+    if (fieldPixelWidth > BIOME_FIELD_MAX_DIM_PX || fieldPixelHeight > BIOME_FIELD_MAX_DIM_PX) {
+      const factor = Math.ceil(Math.max(fieldPixelWidth, fieldPixelHeight) / BIOME_FIELD_MAX_DIM_PX);
+      fieldPixelSizeWorld = BIOME_FIELD_MIN_PIXEL_SIZE_WORLD * factor;
+      fieldPixelWidth = Math.max(1, Math.ceil(terrainWidth / fieldPixelSizeWorld));
+      fieldPixelHeight = Math.max(1, Math.ceil(terrainHeight / fieldPixelSizeWorld));
+    }
+
+    const fieldKey = `${layoutHash}:${Math.round(terrainMinX)}:${Math.round(terrainMinY)}:${Math.round(terrainWidth)}:${Math.round(
+      terrainHeight
+    )}:${fieldPixelSizeWorld}`;
+
+    if (scene.biomeFieldKey !== fieldKey) {
+      const canvas = makeBiomeFieldCanvas({
+        locations: world.locations,
+        terrain: { x: terrainMinX, y: terrainMinY, width: terrainWidth, height: terrainHeight },
+        pixelSizeWorld: fieldPixelSizeWorld,
+        pixelWidth: fieldPixelWidth,
+        pixelHeight: fieldPixelHeight
+      });
+
+      if (canvas) {
+        const texture = Texture.from(canvas);
+        const sprite = scene.biomeField ?? new Sprite(texture);
+        if (!scene.biomeField) {
+          sprite.alpha = 1;
+          scene.terrainTiles.addChildAt(sprite, 0);
+          scene.biomeField = sprite;
+        }
+
+        if (sprite.texture !== texture) {
+          sprite.texture = texture;
+        }
+
+        // Prevent leaking render-textures when the field regenerates.
+        if (scene.biomeFieldTexture && scene.biomeFieldTexture !== texture) scene.biomeFieldTexture.destroy(true);
+        scene.biomeFieldTexture = texture;
+        scene.biomeFieldKey = fieldKey;
+      }
+    }
+
+    if (scene.biomeField) {
+      scene.biomeField.position.set(terrainMinX, terrainMinY);
+      scene.biomeField.width = terrainWidth;
+      scene.biomeField.height = terrainHeight;
+    }
+
     const grassTexture = scene.biomeTextures.get("plains") ?? Texture.WHITE;
     const base = scene.baseTerrain ?? new TilingSprite({ texture: grassTexture, width: terrainWidth, height: terrainHeight });
     if (!scene.baseTerrain) {
@@ -951,6 +1132,7 @@ export function WorldMap({
       scene.terrainTiles.addChild(base);
       scene.baseTerrain = base;
     }
+    base.alpha = scene.biomeField ? 0 : 1;
     base.texture = grassTexture;
     base.width = terrainWidth;
     base.height = terrainHeight;
@@ -1013,8 +1195,10 @@ export function WorldMap({
         });
       const patchMask = existingPatch?.mask ?? new Graphics();
 
+      // Now that we have a macro biome background, keep POI biome patches subtle.
+      patchSprite.alpha = 0.22;
+
       if (!existingPatch) {
-        patchSprite.alpha = 0.55;
         patchSprite.position.set(patchX, patchY);
         const patchRng = createRng(`clawcraft:terrain-patch:${l.id}`);
         patchSprite.tilePosition.set(patchRng.int(0, BIOME_TILE_SIZE - 1), patchRng.int(0, BIOME_TILE_SIZE - 1));
