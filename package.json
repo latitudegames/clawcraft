@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "node scripts/railway/start.mjs",
+    "start:next": "next start",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "node:prep": "node -e \"const fs=require('node:fs'); fs.mkdirSync('.tmp/node-tests',{recursive:true}); fs.writeFileSync('.tmp/node-tests/package.json', JSON.stringify({type:'commonjs'}));\"",
