@@ -78,10 +78,10 @@ To align with the spec’s “hybrid approach” (tile base + overlay sprites), 
    - Label thresholds: confirm desktop and mobile “default fit” shows the right subset.
 2. **Biome richness**
    - Current:
-     - 4 micro decoration overlay variants per biome (64x64) selected deterministically per POI.
+     - 6 micro decoration overlay variants per biome (64x64) selected deterministically per POI.
      - Generic POI icon sprites per `LocationType`.
    - Next (make this the source-of-truth target for “variety”):
-     - Micro decorations: **6 variants per biome** (64x64).
+     - Micro decorations: **6 variants per biome** (64x64). (done)
      - Macro clusters: **2 variants per biome** (256x256, transparent PNG) placed deterministically in each biome region.
      - Signature POIs: **10-15 biome-aware POI sprites** (128-256px) to replace generic icons for major towns/landmarks:
        - castle, port, mine, shrine, ruins gate, wizard tower, desert oasis town, snowy keep, etc.
