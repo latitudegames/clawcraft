@@ -86,8 +86,12 @@ If conflicts appear, update this tracker with the decision and link the doc chan
 - [ ] Expand POI set toward “~100 predefined locations” quality (naming, descriptions, regional flavor)
 - [x] Begin replacing procedural overlays with real transparent PNG overlays per asset pipeline doc
 - [x] Add biome decoration variants per biome + deterministic selection to reduce repetition (currently 2 variants per biome)
-- [ ] Add a 3rd variant per biome (and 1-2 larger “macro” clusters per biome) to reduce repetition at high POI counts
-- [ ] Add a small library of “signature POI” sprites (10-15) for major landmarks (castle/port/library/mine/shrine/etc)
+- [ ] Scale biome asset variety to reduce repetition:
+  - [ ] Micro decor: 6 variants per biome (64x64)
+  - [ ] Macro decor: 2 variants per biome (256x256)
+- [ ] Make biome regions legible at default zoom (background/terrain):
+  - [ ] Replace “biome circles around POIs” with deterministic biome region fill (Voronoi or noise field)
+- [ ] Add a small library of “signature POI” sprites (10-15) for major landmarks and biome-specific POIs (castle/port/library/mine/shrine/oasis/snow keep/etc)
 
 ## Decision Log
 
