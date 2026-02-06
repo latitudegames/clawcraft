@@ -41,3 +41,5 @@ These are persistent preferences for Codex agents working in this repository.
 - Screen-reader semantics smoke test uses role-based Playwright assertions (npm run dev:sr).
 - WorldMap now includes wheel-zoom tween + light pan inertia, plus POI label declutter and biome decoration overlays for better design spec parity.
 - Use `npm run dev:perf:world-state` to baseline `/api/world-state` latency (hot/cold + parallel) and catch perf regressions.
+- Dev-only synthetic load mode: /?synth_agents=<n>&synth_status=<0..1>&synth_party=<0..1>&synth_only=1&... (wired through SpectatorShell and /api/world-state)
+- Headless render perf harness: npm run dev:perf:map-render (samples requestAnimationFrame deltas under synthetic load)
