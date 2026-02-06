@@ -97,13 +97,41 @@ function makeBiomeTileCanvas(tag: string): HTMLCanvasElement | null {
       fill(grassDark);
       sprinkle(260, ["#4C7A34", "#5B8C3E", "#6AA54A"], 2);
       sprinkle(24, ["#2E4A23"], 3);
+      // Leaf litter + darker undergrowth so forests don't read like "plains but darker".
+      sprinkle(22, ["#4A3728", "#5A4A3A"], 1);
+      for (let i = 0; i < 2; i++) {
+        const w = rng.int(6, 14);
+        const h = rng.int(4, 10);
+        const x = rng.int(0, Math.max(0, BIOME_TILE_SIZE - w));
+        const y = rng.int(0, Math.max(0, BIOME_TILE_SIZE - h));
+        dot(x, y, "#2E4A23", w, h);
+      }
       break;
     }
-    case "cave":
+    case "cave": {
+      // Caves are colder/darker than mountains so the biome reads at a glance.
+      fill("#7A8AA2");
+      sprinkle(240, ["#65748B", "#7A8AA2", "#8B9BB4"], 2);
+      sprinkle(22, ["#4A3728", "#5B6C84"], 2);
+      // Hairline cracks.
+      for (let i = 0; i < 8; i++) {
+        const x = rng.int(0, BIOME_TILE_SIZE - 2);
+        const y = rng.int(0, BIOME_TILE_SIZE - 2);
+        dot(x, y, "#5B6C84", rng.int(2, 8), 1);
+      }
+      break;
+    }
     case "mountain": {
       fill(stone);
       sprinkle(240, ["#7A8AA2", "#8B9BB4", "#97A7C0"], 2);
       sprinkle(18, ["#5B6C84"], 3);
+      // Thin ridge lines to suggest elevation bands.
+      for (let y = 8; y < BIOME_TILE_SIZE; y += 18) {
+        const offset = rng.int(0, 6);
+        for (let x = offset; x < BIOME_TILE_SIZE; x += 20) {
+          dot(x, y, "#7A8AA2", rng.int(8, 14), 1);
+        }
+      }
       break;
     }
     case "ruins": {
@@ -111,12 +139,26 @@ function makeBiomeTileCanvas(tag: string): HTMLCanvasElement | null {
       sprinkle(220, ["#7A8AA2", "#8B9BB4", "#97A7C0"], 2);
       // Mossy hints.
       sprinkle(26, ["#5B8C3E", "#6AA54A"], 2);
+      // Cracks + dust.
+      sprinkle(12, [dirt], 2);
+      for (let i = 0; i < 8; i++) {
+        const x = rng.int(0, BIOME_TILE_SIZE - 2);
+        const y = rng.int(0, BIOME_TILE_SIZE - 2);
+        dot(x, y, rng.pick(["#5B6C84", "#4A3728"]), rng.int(2, 10), 1);
+      }
       break;
     }
     case "snow": {
       fill(snow);
       sprinkle(220, ["#E6EEF6", "#F0F4F8", "#DDE6F0"], 2);
       sprinkle(14, ["#8B9BB4"], 2);
+      // Wind streaks (subtle).
+      for (let y = 10; y < BIOME_TILE_SIZE; y += 16) {
+        const offset = rng.int(0, 6);
+        for (let x = offset; x < BIOME_TILE_SIZE; x += 18) {
+          dot(x, y, "#E6EEF6", rng.int(6, 12), 1);
+        }
+      }
       break;
     }
     case "water": {
@@ -128,21 +170,39 @@ function makeBiomeTileCanvas(tag: string): HTMLCanvasElement | null {
           dot(x, y, waterDeep, 7, 2);
         }
       }
-      sprinkle(18, ["#AEEBFF"], 2);
+      // Foam specks.
+      sprinkle(34, ["#AEEBFF"], 2);
       break;
     }
     case "desert": {
       fill(sand);
       sprinkle(220, ["#D8BF5E", "#E8D170", "#F1DE8A"], 2);
       sprinkle(10, [dirt], 2);
+      // Dune bands.
+      for (let y = 10; y < BIOME_TILE_SIZE; y += 16) {
+        const offset = rng.int(0, 8);
+        for (let x = offset; x < BIOME_TILE_SIZE; x += 22) {
+          dot(x, y, "#D8BF5E", rng.int(10, 16), 1);
+        }
+      }
       break;
     }
     case "plains":
     default: {
       fill(grassLight);
       sprinkle(240, ["#6FB842", "#7EC850", "#8DDC5D"], 2);
+      sprinkle(14, [dirt], 2);
       // Tiny warm flower pixels (very subtle).
       sprinkle(10, ["#FFD859", "#FF6B6B", "#87CEEB"], 1);
+      // Occasional tilled patches.
+      for (let i = 0; i < 2; i++) {
+        const w = rng.int(10, 22);
+        const h = rng.int(4, 10);
+        const x = rng.int(0, Math.max(0, BIOME_TILE_SIZE - w));
+        const y = rng.int(0, Math.max(0, BIOME_TILE_SIZE - h));
+        dot(x, y, dirt, w, h);
+        sprinkle(18, ["#6FB842", "#7EC850"], 1);
+      }
       break;
     }
   }
@@ -331,6 +391,16 @@ function makeBiomeFieldCanvas(args: {
   const data = img.data;
   const noiseSeed = createRng("clawcraft:biome-field-noise").int(1, 0x7fffffff);
 
+  const tagIndexByBiome = new Map<BiomeTag, number>();
+  for (let i = 0; i < BIOME_TAGS.length; i++) {
+    const tag = BIOME_TAGS[i];
+    if (!tag) continue;
+    tagIndexByBiome.set(tag, i);
+  }
+
+  // First pass: compute the biome id per pixel. Second pass: paint from biome tiles + apply boundary treatments.
+  const tags = new Uint8Array(args.pixelWidth * args.pixelHeight);
+
   for (let py = 0; py < args.pixelHeight; py++) {
     const worldY = args.terrain.y + (py + 0.5) * args.pixelSizeWorld;
     for (let px = 0; px < args.pixelWidth; px++) {
@@ -362,8 +432,41 @@ function makeBiomeFieldCanvas(args: {
         }
       }
 
-      const tile = tileDataByBiome.get(bestTag) ?? tileDataByBiome.get("plains") ?? null;
-      const outIdx = (py * args.pixelWidth + px) * 4;
+      const outLinear = py * args.pixelWidth + px;
+      tags[outLinear] = tagIndexByBiome.get(bestTag) ?? (tagIndexByBiome.get("plains") ?? 0);
+    }
+  }
+
+  const idxPlains = tagIndexByBiome.get("plains") ?? 0;
+  const idxForest = tagIndexByBiome.get("forest") ?? idxPlains;
+  const idxRuins = tagIndexByBiome.get("ruins") ?? idxPlains;
+  const idxMountain = tagIndexByBiome.get("mountain") ?? idxPlains;
+  const idxSnow = tagIndexByBiome.get("snow") ?? idxPlains;
+  const idxWater = tagIndexByBiome.get("water") ?? idxPlains;
+  const idxDesert = tagIndexByBiome.get("desert") ?? idxPlains;
+
+  // Edge dither seed derived from the base jitter seed so it stays deterministic per world layout.
+  const edgeSeed = noiseSeed ^ 0x5bf03635;
+
+  // Palette (as RGB bytes) for quick edge treatments without hex parsing.
+  const rgbSand: [number, number, number] = [0xe8, 0xd1, 0x70];
+  const rgbFoam: [number, number, number] = [0xae, 0xeb, 0xff];
+  const rgbGrassLight: [number, number, number] = [0x7e, 0xc8, 0x50];
+  const rgbGrassDark: [number, number, number] = [0x5b, 0x8c, 0x3e];
+  const rgbStone: [number, number, number] = [0x8b, 0x9b, 0xb4];
+  const rgbSnow: [number, number, number] = [0xf0, 0xf4, 0xf8];
+  const rgbDirt: [number, number, number] = [0xc9, 0xa5, 0x67];
+
+  for (let py = 0; py < args.pixelHeight; py++) {
+    const worldY = args.terrain.y + (py + 0.5) * args.pixelSizeWorld;
+    for (let px = 0; px < args.pixelWidth; px++) {
+      const worldX = args.terrain.x + (px + 0.5) * args.pixelSizeWorld;
+      const linear = py * args.pixelWidth + px;
+      const tagIndex = tags[linear] ?? idxPlains;
+      const tag = BIOME_TAGS[tagIndex] ?? "plains";
+
+      const tile = tileDataByBiome.get(tag) ?? tileDataByBiome.get("plains") ?? null;
+      const outIdx = linear * 4;
       if (!tile) {
         data[outIdx] = 126;
         data[outIdx + 1] = 200;
@@ -379,6 +482,77 @@ function makeBiomeFieldCanvas(args: {
       data[outIdx + 1] = tile.data[tileIdx + 1] ?? 0;
       data[outIdx + 2] = tile.data[tileIdx + 2] ?? 0;
       data[outIdx + 3] = 255;
+
+      // Boundary treatments: add a touch of shoreline / snowline / forest edge so regions feel designed,
+      // not like perfect Voronoi fields.
+      const left = px > 0 ? (tags[linear - 1] ?? tagIndex) : tagIndex;
+      const right = px + 1 < args.pixelWidth ? (tags[linear + 1] ?? tagIndex) : tagIndex;
+      const up = py > 0 ? (tags[linear - args.pixelWidth] ?? tagIndex) : tagIndex;
+      const down = py + 1 < args.pixelHeight ? (tags[linear + args.pixelWidth] ?? tagIndex) : tagIndex;
+
+      const isEdge = left !== tagIndex || right !== tagIndex || up !== tagIndex || down !== tagIndex;
+      if (!isEdge) continue;
+
+      const hasWaterNeighbor = left === idxWater || right === idxWater || up === idxWater || down === idxWater;
+      const hasSnowNeighbor = left === idxSnow || right === idxSnow || up === idxSnow || down === idxSnow;
+      const hasMountainNeighbor = left === idxMountain || right === idxMountain || up === idxMountain || down === idxMountain;
+      const hasForestNeighbor = left === idxForest || right === idxForest || up === idxForest || down === idxForest;
+      const hasPlainsNeighbor = left === idxPlains || right === idxPlains || up === idxPlains || down === idxPlains;
+      const hasRuinsNeighbor = left === idxRuins || right === idxRuins || up === idxRuins || down === idxRuins;
+
+      const n = hash2DToUnitFloat(px, py, edgeSeed);
+
+      const setRgb = (rgb: [number, number, number]) => {
+        data[outIdx] = rgb[0];
+        data[outIdx + 1] = rgb[1];
+        data[outIdx + 2] = rgb[2];
+      };
+
+      // Shoreline: sand on land-side, foam on water-side.
+      if (tagIndex !== idxWater && hasWaterNeighbor) {
+        if (n < 0.26) setRgb(rgbSand);
+        continue;
+      }
+      if (tagIndex === idxWater && (left !== idxWater || right !== idxWater || up !== idxWater || down !== idxWater)) {
+        if (n < 0.26) setRgb(rgbFoam);
+        continue;
+      }
+
+      // Snowline: snow patches on mountain, rocky hints in snow.
+      if (tagIndex === idxMountain && hasSnowNeighbor) {
+        if (n < 0.18) setRgb(rgbSnow);
+        continue;
+      }
+      if (tagIndex === idxSnow && hasMountainNeighbor) {
+        if (n < 0.18) setRgb(rgbStone);
+        continue;
+      }
+
+      // Forest edge: deepen plains border into shadow grass; lighten forest edge into clearing.
+      if (tagIndex === idxPlains && hasForestNeighbor) {
+        if (n < 0.14) setRgb(rgbGrassDark);
+        continue;
+      }
+      if (tagIndex === idxForest && hasPlainsNeighbor) {
+        if (n < 0.1) setRgb(rgbGrassLight);
+        continue;
+      }
+
+      // Ruins bleed some dirt into adjacent plains/forest for a "crumbled into the land" feel.
+      if (tagIndex === idxPlains && hasRuinsNeighbor) {
+        if (n < 0.1) setRgb(rgbDirt);
+        continue;
+      }
+      if (tagIndex === idxRuins && (hasPlainsNeighbor || hasForestNeighbor)) {
+        if (n < 0.1) setRgb(rgbGrassDark);
+        continue;
+      }
+
+      // Desert edge: a few dusty pixels at the border with plains.
+      if (tagIndex === idxDesert && hasPlainsNeighbor) {
+        if (n < 0.08) setRgb(rgbDirt);
+        continue;
+      }
     }
   }
 
@@ -503,7 +677,9 @@ const DECOR_ASSET_KEYS_BY_BIOME: Record<BiomeTag, string[]> = {
     "decor-plains-rocks-c",
     "decor-plains-fence-hay-d",
     "decor-plains-bushes-e",
-    "decor-plains-stump-f"
+    "decor-plains-stump-f",
+    "decor-plains-farmrows-g",
+    "decor-plains-sunflowers-h"
   ],
   forest: [
     "decor-forest-pines-a",
@@ -511,7 +687,9 @@ const DECOR_ASSET_KEYS_BY_BIOME: Record<BiomeTag, string[]> = {
     "decor-forest-log-c",
     "decor-forest-berries-d",
     "decor-forest-ferns-e",
-    "decor-forest-pinecones-f"
+    "decor-forest-pinecones-f",
+    "decor-forest-stump-hollow-g",
+    "decor-forest-bluebells-h"
   ],
   cave: [
     "decor-cave-stalagmites-a",
@@ -519,7 +697,9 @@ const DECOR_ASSET_KEYS_BY_BIOME: Record<BiomeTag, string[]> = {
     "decor-cave-ore-c",
     "decor-cave-bones-d",
     "decor-cave-webs-e",
-    "decor-cave-puddle-f"
+    "decor-cave-puddle-f",
+    "decor-cave-minecart-g",
+    "decor-cave-railtracks-h"
   ],
   ruins: [
     "decor-ruins-columns-a",
@@ -527,7 +707,9 @@ const DECOR_ASSET_KEYS_BY_BIOME: Record<BiomeTag, string[]> = {
     "decor-ruins-statue-c",
     "decor-ruins-vines-d",
     "decor-ruins-altar-e",
-    "decor-ruins-mosaic-f"
+    "decor-ruins-mosaic-f",
+    "decor-ruins-broken-arch-g",
+    "decor-ruins-sarcophagus-h"
   ],
   mountain: [
     "decor-mountain-rocks-a",
@@ -535,7 +717,9 @@ const DECOR_ASSET_KEYS_BY_BIOME: Record<BiomeTag, string[]> = {
     "decor-mountain-spires-c",
     "decor-mountain-shrubs-d",
     "decor-mountain-cairn-e",
-    "decor-mountain-alpine-f"
+    "decor-mountain-alpine-f",
+    "decor-mountain-ore-vein-g",
+    "decor-mountain-steps-h"
   ],
   snow: [
     "decor-snow-pines-a",
@@ -543,7 +727,9 @@ const DECOR_ASSET_KEYS_BY_BIOME: Record<BiomeTag, string[]> = {
     "decor-snow-ice-c",
     "decor-snow-drift-prints-d",
     "decor-snow-bushes-e",
-    "decor-snow-icicles-f"
+    "decor-snow-icicles-f",
+    "decor-snow-frozen-pond-g",
+    "decor-snow-snowdrift-h"
   ],
   water: [
     "decor-water-lilies-a",
@@ -551,7 +737,9 @@ const DECOR_ASSET_KEYS_BY_BIOME: Record<BiomeTag, string[]> = {
     "decor-water-reeds-c",
     "decor-water-rocks-foam-d",
     "decor-water-foam-e",
-    "decor-water-fish-f"
+    "decor-water-fish-f",
+    "decor-water-coral-g",
+    "decor-water-seashells-h"
   ],
   desert: [
     "decor-desert-cactus-a",
@@ -559,7 +747,9 @@ const DECOR_ASSET_KEYS_BY_BIOME: Record<BiomeTag, string[]> = {
     "decor-desert-oasis-c",
     "decor-desert-bones-d",
     "decor-desert-dunes-e",
-    "decor-desert-cracked-earth-f"
+    "decor-desert-cracked-earth-f",
+    "decor-desert-caravan-wreck-g",
+    "decor-desert-scorpion-den-h"
   ]
 };
 
@@ -567,14 +757,14 @@ const DECOR_ASSET_KEYS_BY_BIOME: Record<BiomeTag, string[]> = {
 // These assets should be visually distinct from the micro decor so the world reads as a
 // biome first, then reveals detail as you zoom.
 const MACRO_DECOR_ASSET_KEYS_BY_BIOME: Record<BiomeTag, string[]> = {
-  plains: ["decor-macro-plains-wheatfield-a", "decor-macro-plains-stonecircle-b"],
-  forest: ["decor-macro-forest-grove-a", "decor-macro-forest-clearing-b"],
-  cave: ["decor-macro-cave-crystals-a", "decor-macro-cave-stalagmites-b"],
-  ruins: ["decor-macro-ruins-archway-a", "decor-macro-ruins-statuegarden-b"],
-  mountain: ["decor-macro-mountain-cliffs-a", "decor-macro-mountain-alpine-b"],
-  snow: ["decor-macro-snow-pines-a", "decor-macro-snow-icefield-b"],
-  water: ["decor-macro-water-reef-a", "decor-macro-water-lilypadfield-b"],
-  desert: ["decor-macro-desert-dunes-a", "decor-macro-desert-oasis-b"]
+  plains: ["decor-macro-plains-wheatfield-a", "decor-macro-plains-stonecircle-b", "decor-macro-plains-orchard-c"],
+  forest: ["decor-macro-forest-grove-a", "decor-macro-forest-clearing-b", "decor-macro-forest-ancienttree-c"],
+  cave: ["decor-macro-cave-crystals-a", "decor-macro-cave-stalagmites-b", "decor-macro-cave-undergroundlake-c"],
+  ruins: ["decor-macro-ruins-archway-a", "decor-macro-ruins-statuegarden-b", "decor-macro-ruins-amphitheater-c"],
+  mountain: ["decor-macro-mountain-cliffs-a", "decor-macro-mountain-alpine-b", "decor-macro-mountain-ropebridge-c"],
+  snow: ["decor-macro-snow-pines-a", "decor-macro-snow-icefield-b", "decor-macro-snow-crevasse-c"],
+  water: ["decor-macro-water-reef-a", "decor-macro-water-lilypadfield-b", "decor-macro-water-shipwreck-c"],
+  desert: ["decor-macro-desert-dunes-a", "decor-macro-desert-oasis-b", "decor-macro-desert-templeruins-c"]
 };
 
 function slugifyPoiName(name: string): string {
@@ -1551,8 +1741,16 @@ export function WorldMap({
 
           const sprites: Sprite[] = [];
           const decorRng = createRng(`clawcraft:decorations:${l.id}`);
+          // Reduce obvious repetition: cycle through a shuffled pool before repeating textures.
+          let cycle = decorRng.shuffle(decorTextures);
+          let cycleIndex = 0;
           for (let i = 0; i < desiredCount; i++) {
-            const sprite = new Sprite(decorRng.pick(decorTextures));
+            if (cycle.length === 0) break;
+            const texture = cycle[cycleIndex % cycle.length];
+            cycleIndex++;
+            if (cycleIndex % cycle.length === 0) cycle = decorRng.shuffle(decorTextures);
+
+            const sprite = new Sprite(texture);
             sprite.anchor.set(0.5, 0.5);
             sprite.alpha = 0.9;
 

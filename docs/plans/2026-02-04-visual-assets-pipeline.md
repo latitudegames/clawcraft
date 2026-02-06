@@ -93,3 +93,19 @@ magick "public/assets/agents/fox-rogue.png" \
 - Batch similar assets together
 - Check outputs before using (AI can be inconsistent)
 - Regenerate with different seed if result is bad
+
+## Variety Guidelines (Biome Assets)
+
+When scaling to 100+ POIs, the fastest way to avoid “copy/paste world” is to build **variety per biome**, not bespoke art per POI.
+
+- Prefer a mix of categories per biome (examples):
+  - Plains: flowers, grass tufts, farm rows, fences, stumps, wells
+  - Forest: pines, logs, mushrooms, stumps, ferns, berry patches
+  - Desert: dunes, cactus, cracked earth, bones, caravan debris, scrub
+  - Snow: pines, ice, frozen ponds, drifts, rocks, icicles
+  - Mountain: boulders, cairns, steps, spires, ore veins, shrubs
+  - Ruins: columns, rubble, arches, mosaics, sarcophagi, vines
+  - Cave: stalagmites, ore, minecarts, tracks, webs, puddles
+  - Water: reefs, kelp, reeds, shells, foam, fish
+- Generate **8-12 micro variants per biome** (64x64) before adding more POIs.
+- Generate **3-6 macro variants per biome** (256x256) to shape large empty spaces between POIs.
