@@ -254,6 +254,7 @@ Determinism checks:
   - POI label declutter: show/hide by POI type + zoom; always show hovered/pinned POI label
   - Lightweight biome decoration overlays (procedural sprites) to reduce flatness around POIs
   - Smooth wheel zoom tween (~300ms ease-out) while keeping the cursor’s world point pinned; cancels on drag/pinch and HUD interactions
+  - Light pan inertia on drag release (momentum + decay); cancels on new gestures and wheel zoom
   - Updated parity screenshots (`npm run dev:parity:screenshots`)
   - Map zoom controls (+/−/reset) and a manual Center button
   - Leaderboard highlights the selected player; Enter selects the top search result

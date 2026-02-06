@@ -394,6 +394,13 @@ type WheelZoomTween = {
   worldY: number;
 };
 
+type PanInertia = {
+  raf: number | null;
+  lastMs: number;
+  vx: number;
+  vy: number;
+};
+
 export function WorldMap({
   world,
   focusUsername,
@@ -436,6 +443,7 @@ export function WorldMap({
   const [sceneVersion, setSceneVersion] = useState(0);
   const didInitCamera = useRef(false);
   const wheelZoomTween = useRef<WheelZoomTween | null>(null);
+  const panInertia = useRef<PanInertia | null>(null);
   const focusedFor = useRef<string | null>(null);
   const pixi = useRef<PixiScene | null>(null);
   const [hoverPoiId, setHoverPoiId] = useState<string | null>(null);
@@ -453,10 +461,19 @@ export function WorldMap({
     wheelZoomTween.current = null;
   };
 
+  const cancelPanInertia = () => {
+    const state = panInertia.current;
+    if (state?.raf != null) cancelAnimationFrame(state.raf);
+    panInertia.current = null;
+  };
+
   useEffect(() => {
     return () => {
       const tween = wheelZoomTween.current;
       if (tween?.raf != null) cancelAnimationFrame(tween.raf);
+
+      const inertia = panInertia.current;
+      if (inertia?.raf != null) cancelAnimationFrame(inertia.raf);
     };
   }, []);
 
@@ -1088,7 +1105,20 @@ export function WorldMap({
   }, [sceneVersion, assetsVersion, camera.scale, displayOffsets, focusUsername, world.agents]);
 
   const drag = useRef<
-    null | { pointerId: number; startClientX: number; startClientY: number; baseX: number; baseY: number; moved: boolean }
+    | null
+    | {
+        pointerId: number;
+        startClientX: number;
+        startClientY: number;
+        baseX: number;
+        baseY: number;
+        moved: boolean;
+        lastClientX: number;
+        lastClientY: number;
+        lastMs: number;
+        vx: number;
+        vy: number;
+      }
   >(null);
   const pointers = useRef(new Map<number, { clientX: number; clientY: number }>());
   const pinch = useRef<
@@ -1165,6 +1195,7 @@ export function WorldMap({
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId);
     cancelWheelZoomTween();
+    cancelPanInertia();
     pointers.current.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
 
     // Two-pointer gestures take over from single-pointer drag (pinch-to-zoom + two-finger pan).
@@ -1194,13 +1225,19 @@ export function WorldMap({
     }
     if (pointers.current.size > 2) return;
 
+    const nowMs = typeof performance !== "undefined" ? performance.now() : Date.now();
     drag.current = {
       pointerId: e.pointerId,
       startClientX: e.clientX,
       startClientY: e.clientY,
       baseX: camera.x,
       baseY: camera.y,
-      moved: false
+      moved: false,
+      lastClientX: e.clientX,
+      lastClientY: e.clientY,
+      lastMs: nowMs,
+      vx: 0,
+      vy: 0
     };
     didInitCamera.current = true;
   };
@@ -1236,11 +1273,24 @@ export function WorldMap({
       return;
     }
 
+    const nowMs = typeof performance !== "undefined" ? performance.now() : Date.now();
     const dx = e.clientX - dragState.startClientX;
     const dy = e.clientY - dragState.startClientY;
     if (!dragState.moved) {
       if (Math.hypot(dx, dy) <= 4) return;
       dragState.moved = true;
+      dragState.lastClientX = e.clientX;
+      dragState.lastClientY = e.clientY;
+      dragState.lastMs = nowMs;
+      dragState.vx = 0;
+      dragState.vy = 0;
+    } else {
+      const dt = Math.max(1, nowMs - dragState.lastMs);
+      dragState.vx = (e.clientX - dragState.lastClientX) / dt;
+      dragState.vy = (e.clientY - dragState.lastClientY) / dt;
+      dragState.lastClientX = e.clientX;
+      dragState.lastClientY = e.clientY;
+      dragState.lastMs = nowMs;
     }
     setCamera((prev) => ({ ...prev, x: dragState.baseX + dx, y: dragState.baseY + dy }));
 
@@ -1267,13 +1317,19 @@ export function WorldMap({
         const [onlyId] = pointers.current.keys();
         const pos = typeof onlyId === "number" ? pointers.current.get(onlyId) : null;
         if (typeof onlyId === "number" && pos) {
+          const nowMs = typeof performance !== "undefined" ? performance.now() : Date.now();
           drag.current = {
             pointerId: onlyId,
             startClientX: pos.clientX,
             startClientY: pos.clientY,
             baseX: camera.x,
             baseY: camera.y,
-            moved: true
+            moved: true,
+            lastClientX: pos.clientX,
+            lastClientY: pos.clientY,
+            lastMs: nowMs,
+            vx: 0,
+            vy: 0
           };
         }
       }
@@ -1285,7 +1341,52 @@ export function WorldMap({
     if (!state || state.pointerId !== e.pointerId) return;
     drag.current = null;
 
-    if (state.moved) return;
+    if (state.moved) {
+      // Light pan inertia (spec: "Pan inertia") so release feels less abrupt.
+      const nowMs = typeof performance !== "undefined" ? performance.now() : Date.now();
+      const ageMs = nowMs - state.lastMs;
+      let vx = ageMs > 120 ? 0 : state.vx;
+      let vy = ageMs > 120 ? 0 : state.vy;
+
+      const maxSpeed = 2.5; // px/ms
+      const speed = Math.hypot(vx, vy);
+      if (speed > maxSpeed && speed > 0) {
+        const f = maxSpeed / speed;
+        vx *= f;
+        vy *= f;
+      }
+
+      const minSpeed = 0.02; // px/ms
+      if (Math.hypot(vx, vy) < minSpeed) return;
+
+      cancelPanInertia();
+      const inertia: PanInertia = { raf: null, lastMs: nowMs, vx, vy };
+
+      const tick = (ts: number) => {
+        const s = panInertia.current;
+        if (!s) return;
+
+        const dt = clamp(ts - s.lastMs, 0, 32);
+        s.lastMs = ts;
+
+        setCamera((prev) => ({ ...prev, x: prev.x + s.vx * dt, y: prev.y + s.vy * dt }));
+
+        const decay = Math.pow(0.92, dt / 16.67);
+        s.vx *= decay;
+        s.vy *= decay;
+
+        if (Math.hypot(s.vx, s.vy) < minSpeed) {
+          panInertia.current = null;
+          return;
+        }
+
+        s.raf = requestAnimationFrame(tick);
+      };
+
+      inertia.raf = requestAnimationFrame(tick);
+      panInertia.current = inertia;
+      return;
+    }
     if (e.button !== 0) return;
 
     const rect = e.currentTarget.getBoundingClientRect();
@@ -1315,6 +1416,7 @@ export function WorldMap({
   const onWheel = (e: WheelEvent<HTMLDivElement>) => {
     e.preventDefault();
     didInitCamera.current = true;
+    cancelPanInertia();
 
     const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
     const cursorX = e.clientX - rect.left;
@@ -1604,6 +1706,7 @@ export function WorldMap({
         onPointerDown={(e) => {
           e.stopPropagation();
           cancelWheelZoomTween();
+          cancelPanInertia();
         }}
         onWheel={(e) => e.stopPropagation()}
       >
@@ -1614,6 +1717,7 @@ export function WorldMap({
             aria-label="Zoom in"
             onClick={() => {
               cancelWheelZoomTween();
+              cancelPanInertia();
               didInitCamera.current = true;
               const cx = effectiveViewport.width / 2;
               const cy = size.height / 2;
@@ -1634,6 +1738,7 @@ export function WorldMap({
             aria-label="Zoom out"
             onClick={() => {
               cancelWheelZoomTween();
+              cancelPanInertia();
               didInitCamera.current = true;
               const cx = effectiveViewport.width / 2;
               const cy = size.height / 2;
@@ -1656,6 +1761,7 @@ export function WorldMap({
               if (!bounds) return;
               if (size.width <= 0 || size.height <= 0) return;
               cancelWheelZoomTween();
+              cancelPanInertia();
               didInitCamera.current = true;
 
               const next = fitViewportCamera({
@@ -1684,6 +1790,7 @@ export function WorldMap({
               if (size.width <= 0 || size.height <= 0) return;
 
               cancelWheelZoomTween();
+              cancelPanInertia();
               didInitCamera.current = true;
               setCamera((prev) =>
                 computeCenterTransform({
