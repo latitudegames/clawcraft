@@ -52,6 +52,8 @@ If conflicts appear, update this tracker with the decision and link the doc chan
 - [x] Keep Pixi text labels screen-sized (inverse-scale) and reduce agent name label clutter (focused-only)
 - [x] Add procedural biome tile textures + Pixi terrain tiling background to reduce “empty grass” feel
 - [x] Reduce bubble noise when zoomed out by grouping solo bubbles by nearest POI and selecting bubbles near the viewport center
+- [x] Declutter POI labels by type + zoom; always show hovered/pinned POI label
+- [x] Add lightweight biome decoration overlays around POIs (procedural textures as a stand-in for the asset overlay pipeline)
 
 ### M4: Motion + Timing Parity
 - [x] Framer Motion transitions for modal/tabs/panel/bubbles

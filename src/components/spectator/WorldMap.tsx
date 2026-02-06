@@ -144,6 +144,125 @@ function makeBiomeTileCanvas(tag: string): HTMLCanvasElement | null {
   return canvas;
 }
 
+const DECOR_CANVAS_SIZE = 32;
+
+function makeBiomeDecorationCanvas(tag: string): HTMLCanvasElement | null {
+  if (typeof document === "undefined") return null;
+  const canvas = document.createElement("canvas");
+  canvas.width = DECOR_CANVAS_SIZE;
+  canvas.height = DECOR_CANVAS_SIZE;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  const rng = createRng(`clawcraft:biome-decor:${tag}`);
+  const dot = (x: number, y: number, color: string, w = 1, h = 1) => {
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, w, h);
+  };
+
+  const circle = (cx: number, cy: number, r: number, color: string) => {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+  };
+
+  const grassDark = "#5B8C3E";
+  const grassLight = "#7EC850";
+  const stone = "#8B9BB4";
+  const waterDeep = "#3A8DBF";
+  const waterShallow = "#6CCFF6";
+  const sand = "#E8D170";
+  const snow = "#F0F4F8";
+
+  ctx.clearRect(0, 0, DECOR_CANVAS_SIZE, DECOR_CANVAS_SIZE);
+
+  switch (tag) {
+    case "forest": {
+      // Simple tree cluster.
+      for (let i = 0; i < 4; i++) {
+        const cx = rng.int(8, 24);
+        const cy = rng.int(10, 22);
+        circle(cx, cy, rng.int(5, 7), rng.pick([grassDark, "#4C7A34", "#6AA54A"]));
+        // trunk
+        dot(cx - 1, cy + 5, "#4A3728", 2, 3);
+      }
+      break;
+    }
+    case "plains": {
+      // Tiny flower tufts.
+      for (let i = 0; i < 14; i++) {
+        const x = rng.int(4, 27);
+        const y = rng.int(6, 27);
+        dot(x, y, rng.pick(["#FFD859", "#FF6B6B", "#87CEEB"]), 1, 1);
+        if (rng.int(0, 3) === 0) dot(x + 1, y, grassLight, 1, 1);
+      }
+      break;
+    }
+    case "ruins": {
+      // Broken stone + moss.
+      for (let i = 0; i < 3; i++) {
+        const x = rng.int(6, 18);
+        const y = rng.int(8, 18);
+        dot(x, y, rng.pick([stone, "#7A8AA2", "#97A7C0"]), 10, 6);
+        dot(x + 2, y + 2, "#5B8C3E", 4, 2);
+      }
+      break;
+    }
+    case "cave":
+    case "mountain": {
+      // Rock cluster.
+      for (let i = 0; i < 4; i++) {
+        const x = rng.int(6, 20);
+        const y = rng.int(10, 22);
+        dot(x, y, rng.pick([stone, "#7A8AA2", "#97A7C0"]), rng.int(6, 10), rng.int(3, 6));
+      }
+      break;
+    }
+    case "water": {
+      // Lily pads / ripples.
+      for (let i = 0; i < 4; i++) {
+        const cx = rng.int(8, 24);
+        const cy = rng.int(8, 24);
+        circle(cx, cy, rng.int(4, 6), rng.pick([waterDeep, waterShallow]));
+        dot(cx, cy, "#AEEBFF", 1, 1);
+      }
+      break;
+    }
+    case "desert": {
+      // Cactus-ish blobs.
+      for (let i = 0; i < 3; i++) {
+        const x = rng.int(8, 22);
+        const y = rng.int(10, 22);
+        dot(x, y, "#5BBA6F", 3, 8);
+        dot(x - 2, y + 2, "#5BBA6F", 2, 3);
+        dot(x + 3, y + 2, "#5BBA6F", 2, 3);
+      }
+      dot(6, 24, sand, 20, 4);
+      break;
+    }
+    case "snow": {
+      // Snow tufts + pine hints.
+      for (let i = 0; i < 4; i++) {
+        const x = rng.int(6, 22);
+        const y = rng.int(12, 24);
+        dot(x, y, snow, rng.int(6, 12), rng.int(2, 4));
+        dot(x + 2, y - 2, "#5B8C3E", 3, 3);
+      }
+      break;
+    }
+    default: {
+      // Fallback: a couple of grass specks.
+      for (let i = 0; i < 10; i++) {
+        dot(rng.int(4, 27), rng.int(6, 27), rng.pick([grassLight, grassDark]), 1, 2);
+      }
+      break;
+    }
+  }
+
+  return canvas;
+}
+
 function fitViewportCamera(args: {
   bounds: { minX: number; minY: number; maxX: number; maxY: number };
   viewport: { width: number; height: number };
@@ -230,6 +349,15 @@ type PixiScene = {
   terrainTiles: Container;
   baseTerrain: TilingSprite | null;
   biomeTextures: Map<string, Texture>;
+  decorationTextures: Map<string, Texture>;
+  decorationsByLocationId: Map<
+    string,
+    {
+      sprites: Sprite[];
+      radius: number;
+      biomeTag: string | null;
+    }
+  >;
   terrainPatchesByLocationId: Map<
     string,
     {
@@ -390,9 +518,18 @@ export function WorldMap({
       const agentTextures = new Map<AgentSpriteKey, Texture>();
       const poiTextures = new Map<PoiIconKey, Texture>();
       const biomeTextures = new Map<string, Texture>();
+      const decorationTextures = new Map<string, Texture>();
       const spritesByUsername = new Map<string, Sprite>();
       const poiSpritesByLocationId = new Map<string, Sprite>();
       const locationLabelsById = new Map<string, Text>();
+      const decorationsByLocationId = new Map<
+        string,
+        {
+          sprites: Sprite[];
+          radius: number;
+          biomeTag: string | null;
+        }
+      >();
       const terrainPatchesByLocationId = new Map<
         string,
         {
@@ -409,6 +546,12 @@ export function WorldMap({
         biomeTextures.set(tag, Texture.from(canvas));
       }
 
+      for (const tag of ["plains", "forest", "cave", "ruins", "mountain", "snow", "water", "desert"]) {
+        const canvas = makeBiomeDecorationCanvas(tag);
+        if (!canvas) continue;
+        decorationTextures.set(tag, Texture.from(canvas));
+      }
+
       agentSprites.sortableChildren = true;
       poiSprites.sortableChildren = true;
 
@@ -418,6 +561,8 @@ export function WorldMap({
         terrainTiles,
         baseTerrain: null,
         biomeTextures,
+        decorationTextures,
+        decorationsByLocationId,
         terrainPatchesByLocationId,
         terrainGraphics,
         pathGraphics,
@@ -630,6 +775,7 @@ export function WorldMap({
         patchMask.clear();
         patchMask.circle(radius, radius, radius).fill({ color: 0xffffff, alpha: 1 });
         patchMask.position.set(patchX, patchY);
+        patchMask.renderable = false; // mask should not draw into the scene
         patchSprite.mask = patchMask;
 
         scene.terrainTiles.addChild(patchMask);
@@ -652,12 +798,63 @@ export function WorldMap({
 
         patchSprite.position.set(patchX, patchY);
         patchMask.position.set(patchX, patchY);
+        patchMask.renderable = false;
       }
 
       // Faint warm ring and biome tint to keep patches from feeling too flat.
       scene.terrainGraphics.circle(l.x, l.y, Math.round(radius * 0.82)).stroke({ width: 10, color: 0x4a3728, alpha: 0.02 });
       scene.terrainGraphics.circle(l.x, l.y, Math.round(radius * 0.62)).stroke({ width: 6, color: 0xffffff, alpha: 0.03 });
       scene.terrainGraphics.circle(l.x, l.y, Math.round(radius * 0.92)).stroke({ width: 6, color: colorForBiomeTag(biomeTag), alpha: 0.02 });
+
+      // Biome decorations (very lightweight stand-in for the future asset overlay pipeline).
+      const decorTexture = scene.decorationTextures.get(biomeTag) ?? scene.decorationTextures.get("plains") ?? null;
+      if (decorTexture) {
+        const baseCount =
+          biomeTag === "forest"
+            ? 18
+            : biomeTag === "plains"
+              ? 12
+              : biomeTag === "water"
+                ? 8
+                : biomeTag === "desert"
+                  ? 10
+                  : biomeTag === "snow"
+                    ? 10
+                    : 14;
+        const typeMultiplier = l.type === "major_city" ? 0.35 : l.type === "town" ? 0.55 : l.type === "landmark" ? 0.7 : 0.85;
+        const desiredCount = Math.max(0, Math.round(baseCount * typeMultiplier));
+
+        const existingDecor = scene.decorationsByLocationId.get(l.id) ?? null;
+        const needsRebuild =
+          !existingDecor ||
+          existingDecor.biomeTag !== biomeTag ||
+          existingDecor.radius !== radius ||
+          existingDecor.sprites.length !== desiredCount;
+
+        if (needsRebuild) {
+          for (const s of existingDecor?.sprites ?? []) {
+            s.parent?.removeChild(s);
+            s.destroy();
+          }
+
+          const sprites: Sprite[] = [];
+          const decorRng = createRng(`clawcraft:decorations:${l.id}`);
+          for (let i = 0; i < desiredCount; i++) {
+            const sprite = new Sprite(decorTexture);
+            sprite.anchor.set(0.5, 0.5);
+            sprite.alpha = 0.9;
+
+            const angle = decorRng.float(0, Math.PI * 2);
+            const dist = decorRng.float(radius * 0.45, radius * 0.98);
+            sprite.position.set(l.x + Math.cos(angle) * dist, l.y + Math.sin(angle) * dist);
+            sprite.scale.set(decorRng.float(0.55, 0.9));
+
+            scene.terrainTiles.addChild(sprite);
+            sprites.push(sprite);
+          }
+          scene.decorationsByLocationId.set(l.id, { sprites, radius, biomeTag });
+        }
+      }
 
       scene.poiMarkerGraphics.circle(l.x, l.y + 10, 12).fill({ color: 0x000000, alpha: 0.1 });
 
@@ -735,6 +932,15 @@ export function WorldMap({
       patch.mask.destroy();
       scene.terrainPatchesByLocationId.delete(locationId);
     }
+
+    for (const [locationId, entry] of scene.decorationsByLocationId.entries()) {
+      if (seenIds.has(locationId)) continue;
+      for (const s of entry.sprites) {
+        s.parent?.removeChild(s);
+        s.destroy();
+      }
+      scene.decorationsByLocationId.delete(locationId);
+    }
   }, [sceneVersion, assetsVersion, bounds, world.connections, world.locations]);
 
   useEffect(() => {
@@ -743,10 +949,23 @@ export function WorldMap({
     if (camera.scale <= 0) return;
 
     const invScale = 1 / camera.scale;
+    const activePoiId = pinnedPoiId ?? hoverPoiId;
+    let anyVisible = false;
     for (const l of world.locations) {
       if (typeof l.x !== "number" || typeof l.y !== "number") continue;
       const label = scene.locationLabelsById.get(l.id);
       if (!label) continue;
+
+      const isActive = Boolean(activePoiId && activePoiId === l.id);
+      const showAtScale =
+        l.type === "major_city" || l.type === "landmark"
+          ? 0.9
+          : l.type === "town"
+            ? 1.15
+            : 1.45;
+      const isVisible = isActive || camera.scale >= showAtScale;
+      label.visible = isVisible;
+      if (isVisible) anyVisible = true;
 
       const poiKey = slugifyPoiName(l.name) as PoiIconKey;
       const hasIcon = Boolean(scene.poiTextures.get(poiKey));
@@ -759,7 +978,10 @@ export function WorldMap({
       label.scale.set(invScale);
       label.position.set(l.x + iconRadiusWorld + padXPx * invScale, l.y - iconRadiusWorld - padYPx * invScale);
     }
-  }, [sceneVersion, assetsVersion, camera.scale, world.locations]);
+
+    // Avoid a full label pass if no labels are visible at the current zoom.
+    scene.locationLabels.visible = anyVisible;
+  }, [sceneVersion, assetsVersion, camera.scale, hoverPoiId, pinnedPoiId, world.locations]);
 
   useEffect(() => {
     const scene = pixi.current;

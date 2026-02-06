@@ -44,8 +44,9 @@ async function desktopFlow(page) {
   await expectSelected(playersTab, true, "[sr] desktop: ArrowLeft should switch to Players");
 
   const firstRow = page.locator('button[data-leaderboard-row="player"]').first();
-  const hasRow = (await firstRow.count()) > 0;
-  if (!hasRow) {
+  try {
+    await firstRow.waitFor({ state: "visible", timeout: 8000 });
+  } catch {
     console.log("[sr] desktop: no leaderboard rows found; skipping modal checks");
     return;
   }
@@ -103,8 +104,9 @@ async function mobileFlow(page) {
   await expectSelected(playersTab, true, "[sr] mobile: ArrowLeft should switch to Players");
 
   const firstRow = drawer.locator('button[data-leaderboard-row="player"]').first();
-  const hasRow = (await firstRow.count()) > 0;
-  if (!hasRow) {
+  try {
+    await firstRow.waitFor({ state: "visible", timeout: 8000 });
+  } catch {
     console.log("[sr] mobile: no leaderboard rows found; skipping agent sheet checks");
     return;
   }

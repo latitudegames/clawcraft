@@ -251,6 +251,8 @@ Determinism checks:
   - POI labels use the pixel font family (per design spec)
   - Agent name labels are focused-only (speech bubbles already include names)
   - Bubble declutter: when zoomed out, solo bubbles group by nearest POI and selection prefers bubbles near viewport center
+  - POI label declutter: show/hide by POI type + zoom; always show hovered/pinned POI label
+  - Lightweight biome decoration overlays (procedural sprites) to reduce flatness around POIs
   - Updated parity screenshots (`npm run dev:parity:screenshots`)
   - Map zoom controls (+/−/reset) and a manual Center button
   - Leaderboard highlights the selected player; Enter selects the top search result
@@ -258,6 +260,7 @@ Determinism checks:
   - Deep-link selected agent via URL: `/?agent=<username>` (selection persists on refresh)
   - Agent modal shows a small sprite avatar (deterministic by username)
   - Agent modal shows current quest progress (Step X/20) when questing
+  - Screen-reader smoke (`npm run dev:sr`) improved to wait for rows before attempting modal/sheet checks
   - Starter pixel agent sprites rendered on the map (`public/assets/agents/*`, nearest-neighbor)
   - Starter POI icons rendered on the map (`public/assets/poi/*`)
   - Location connections included in `/api/world-state` and rendered as map lines

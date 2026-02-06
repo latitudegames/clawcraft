@@ -26,13 +26,15 @@ Backend and API behavior are mostly aligned with V1, including:
 
 The primary gap is frontend parity. Current spectator UI is functional but still scaffold-level and does not match the intended visual language, layout model, and interaction model in the design specification.
 
-### Status Update (2026-02-05)
+### Status Update (2026-02-06)
 
-Implementation waves 1-4 have now been applied in-code:
+Implementation waves 1-6 have now been applied in-code:
 - Foundation + shell parity (desktop fixed panel, mobile drawer/top-bar)
 - Component parity (leaderboard tabs/rows, agent modal tab IA + bottom-sheet)
 - Map + party parity (layer separation, party bubbles, POI tooltips, party fan-out)
 - Motion + timing/state parity (Framer Motion transitions, toast layer, env-aware polling, lightweight Zustand store)
+- Map readability passes (inverse-scaled Pixi labels, tiled biome patches, hotspot bubble grouping)
+- POI label declutter by type/zoom + lightweight biome decoration overlays
 
 Source-of-truth tracking for the current state lives in:
 - `docs/plans/2026-02-05-product-repo-improvement-tracker.md`
