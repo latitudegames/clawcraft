@@ -10,6 +10,7 @@ Add dev-only tooling to stress test spectator rendering (Pixi sprites + HTML bub
 
 - Dev-only synthetic agent injection:
   - `GET /api/world-state?synth_agents=<n>&synth_status=<0..1>&synth_party=<0..1>&synth_only=1&synth_seed=<seed>`
+- `synth_only=1` uses a lighter world-skeleton query (locations + connections only) before appending synthetic agents.
 - Client support (SpectatorShell) passes through those query params.
 - Headless render perf runner:
   - `npm run dev:perf:map-render`
@@ -20,11 +21,20 @@ Add dev-only tooling to stress test spectator rendering (Pixi sprites + HTML bub
 
 Headless baseline (Playwright `chromium`, local dev server):
 
-- Command: `npm run dev:perf:map-render`
-- Params: `synth_agents=2000`, `synth_status=0.15`, `synth_party=0.12`, `synth_only=1`, `synth_seed=perf`
-- Sample: 3000ms (warmup 1500ms)
-- Frames: 37
-- Frame ms: avg 66.89, p50 66.70, p95 75.00
-- Approx FPS: 15.0
+- Run #1
+  - Command: `npm run dev:perf:map-render`
+  - Params: `synth_agents=2000`, `synth_status=0.15`, `synth_party=0.12`, `synth_only=1`, `synth_seed=perf`
+  - Sample: 3000ms (warmup 1500ms)
+  - Frames: 37
+  - Frame ms: avg 66.89, p50 66.70, p95 75.00
+  - Approx FPS: 15.0
+
+- Run #2
+  - Command: `npm run dev:perf:map-render`
+  - Params: `synth_agents=2000`, `synth_status=0.15`, `synth_party=0.12`, `synth_only=1`, `synth_seed=perf`
+  - Sample: 3000ms (warmup 1500ms)
+  - Frames: 38
+  - Frame ms: avg 64.91, p50 66.70, p95 67.50
+  - Approx FPS: 15.4
 
 Note: headless runs are typically conservative versus a real GPU-accelerated browser.
