@@ -85,7 +85,8 @@ If conflicts appear, update this tracker with the decision and link the doc chan
 - [ ] Map readability pass under 100+ POIs (label thresholds + icon sizing + road density)
 - [ ] Expand POI set toward “~100 predefined locations” quality (naming, descriptions, regional flavor)
 - [x] Begin replacing procedural overlays with real transparent PNG overlays per asset pipeline doc
-- [ ] Add 2-3 biome decoration variants per biome + deterministic selection to reduce repetition
+- [x] Add biome decoration variants per biome + deterministic selection to reduce repetition (currently 2 variants per biome)
+- [ ] Add a 3rd variant per biome (and 1-2 larger “macro” clusters per biome) to reduce repetition at high POI counts
 - [ ] Add a small library of “signature POI” sprites (10-15) for major landmarks (castle/port/library/mine/shrine/etc)
 
 ## Decision Log

@@ -346,14 +346,14 @@ type BiomeTag = (typeof BIOME_TAGS)[number];
 // We keep these generic per biome initially (instead of bespoke per-POI art) to scale
 // to 100+ locations while maintaining variety and a consistent look.
 const DECOR_ASSET_KEYS_BY_BIOME: Record<BiomeTag, string[]> = {
-  plains: ["decor-plains-flowers-a"],
-  forest: ["decor-forest-pines-a"],
-  cave: ["decor-cave-stalagmites-a"],
-  ruins: ["decor-ruins-columns-a"],
-  mountain: ["decor-mountain-rocks-a"],
-  snow: ["decor-snow-pines-a"],
-  water: ["decor-water-lilies-a"],
-  desert: ["decor-desert-cactus-a"]
+  plains: ["decor-plains-flowers-a", "decor-plains-grass-b"],
+  forest: ["decor-forest-pines-a", "decor-forest-mushrooms-b"],
+  cave: ["decor-cave-stalagmites-a", "decor-cave-crystals-b"],
+  ruins: ["decor-ruins-columns-a", "decor-ruins-rubble-b"],
+  mountain: ["decor-mountain-rocks-a", "decor-mountain-boulders-b"],
+  snow: ["decor-snow-pines-a", "decor-snow-rocks-b"],
+  water: ["decor-water-lilies-a", "decor-water-kelp-b"],
+  desert: ["decor-desert-cactus-a", "decor-desert-rocks-b"]
 };
 
 function slugifyPoiName(name: string): string {

@@ -69,7 +69,8 @@ To align with the spec’s “hybrid approach” (tile base + overlay sprites), 
    - Road density: reduce long, overlapping cross-region routes.
    - Label thresholds: confirm desktop and mobile “default fit” shows the right subset.
 2. **Biome richness**
-   - Add 2-3 decoration overlay variants per biome and select deterministically per POI.
+   - Current: 2 decoration overlay variants per biome (deterministic selection per POI).
+   - Next: add a 3rd variant per biome + a couple larger “macro” clusters for each biome (forests/ruins/mountains).
    - Begin introducing a small set of “signature” POI sprites (10-15) to break up repetition
      - castles/ports/libraries/mines/ruins/shrines
    - Continue replacing procedural overlays with real transparent PNG overlays per:
