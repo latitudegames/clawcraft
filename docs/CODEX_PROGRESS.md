@@ -175,7 +175,8 @@ Offline smoke (no npm deps / no DB):
 - [x] Complete automated accessibility checks (focus traps, keyboard behavior, contrast checks via axe-core).
 - [x] Add automated screen-reader semantics smoke (role-based checks via Playwright).
 - [ ] Manual screen-reader navigation walkthrough (VoiceOver/NVDA).
-- [ ] Tune map performance and network cadence under demo population load.
+- [ ] Tune map performance and network cadence under demo/synthetic population load.
+  - Dev-only synthetic mode exists for stress testing: `/?synth_agents=2000&synth_only=1` (see `npm run dev:perf:map-render` baseline).
 - [ ] Consider optional ambient map effects (post-parity polish).
 
 ### Done
@@ -218,6 +219,15 @@ Determinism checks:
 - Added `scripts/dev/seed.mjs` + `npm run dev:seed`
 - Added `npm test` (Node-compiled subset test runner) + ignored `.tmp/`
 - Implemented core deterministic helpers (progression, timing, quest resolution)
+
+### 2026-02-06
+- Landed spectator parity waves (layout, typography, parchment styling, map declutter + terrain richness, wheel zoom tween, pan inertia).
+- Added repeatable QA harnesses:
+  - Parity screenshots: `npm run dev:parity:screenshots`
+  - A11y audit: `npm run dev:a11y`
+  - Screen-reader semantics smoke: `npm run dev:sr`
+- Added world-state perf harness + baseline: `npm run dev:perf:world-state`
+- Added dev-only synthetic load mode for map stress testing (wired through `/?synth_agents=...` and `/api/world-state`) + headless render perf runner: `npm run dev:perf:map-render`
 - Implemented core API loop endpoints (`/api/create-character`, `/api/quests`, `/api/action`, `/api/dashboard`)
 - Implemented spectator support endpoints (`/api/world-state`, `/api/leaderboard`, `/api/leaderboard/guilds`) + webhook registration (`/api/webhook`)
 - Remaining gaps: migrations, party quests, equipment handling, guild/agent endpoints, schedulers/UI
