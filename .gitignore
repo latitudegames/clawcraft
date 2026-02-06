@@ -4,6 +4,8 @@ node_modules
 dist
 .tmp
 .DS_Store
+.vercel
+.railway
 .env
 .env.local
 *.tsbuildinfo
