@@ -1,0 +1,9 @@
+[phases.install]
+cmds = ["npm ci"]
+
+[phases.build]
+cmds = ["npm run build"]
+
+[start]
+cmd = "bash scripts/railway/start.sh"
+
