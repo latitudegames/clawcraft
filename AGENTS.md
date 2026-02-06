@@ -39,3 +39,5 @@ These are persistent preferences for Codex agents working in this repository.
 - Keep Pixi Text labels inverse-scaled so they remain screen-sized while zooming (prevents giant/pixelated labels); agent name labels are focused-only.
 - Leaderboard and agent modal tabs now have explicit tablist/tab/tabpanel semantics for screen readers.
 - Screen-reader semantics smoke test uses role-based Playwright assertions (npm run dev:sr).
+
+- WorldMap now includes wheel-zoom tween + light pan inertia, plus POI label declutter and biome decoration overlays for better design spec parity.
