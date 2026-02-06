@@ -469,14 +469,14 @@ type BiomeTag = (typeof BIOME_TAGS)[number];
 // We keep these generic per biome initially (instead of bespoke per-POI art) to scale
 // to 100+ locations while maintaining variety and a consistent look.
 const DECOR_ASSET_KEYS_BY_BIOME: Record<BiomeTag, string[]> = {
-  plains: ["decor-plains-flowers-a", "decor-plains-grass-b"],
-  forest: ["decor-forest-pines-a", "decor-forest-mushrooms-b"],
-  cave: ["decor-cave-stalagmites-a", "decor-cave-crystals-b"],
-  ruins: ["decor-ruins-columns-a", "decor-ruins-rubble-b"],
-  mountain: ["decor-mountain-rocks-a", "decor-mountain-boulders-b"],
-  snow: ["decor-snow-pines-a", "decor-snow-rocks-b"],
-  water: ["decor-water-lilies-a", "decor-water-kelp-b"],
-  desert: ["decor-desert-cactus-a", "decor-desert-rocks-b"]
+  plains: ["decor-plains-flowers-a", "decor-plains-grass-b", "decor-plains-rocks-c", "decor-plains-fence-hay-d"],
+  forest: ["decor-forest-pines-a", "decor-forest-mushrooms-b", "decor-forest-log-c", "decor-forest-berries-d"],
+  cave: ["decor-cave-stalagmites-a", "decor-cave-crystals-b", "decor-cave-ore-c", "decor-cave-bones-d"],
+  ruins: ["decor-ruins-columns-a", "decor-ruins-rubble-b", "decor-ruins-statue-c", "decor-ruins-vines-d"],
+  mountain: ["decor-mountain-rocks-a", "decor-mountain-boulders-b", "decor-mountain-spires-c", "decor-mountain-shrubs-d"],
+  snow: ["decor-snow-pines-a", "decor-snow-rocks-b", "decor-snow-ice-c", "decor-snow-drift-prints-d"],
+  water: ["decor-water-lilies-a", "decor-water-kelp-b", "decor-water-reeds-c", "decor-water-rocks-foam-d"],
+  desert: ["decor-desert-cactus-a", "decor-desert-rocks-b", "decor-desert-oasis-c", "decor-desert-bones-d"]
 };
 
 function slugifyPoiName(name: string): string {

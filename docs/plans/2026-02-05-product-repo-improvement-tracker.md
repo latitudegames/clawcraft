@@ -85,7 +85,7 @@ If conflicts appear, update this tracker with the decision and link the doc chan
 - [ ] Map readability pass under 100+ POIs (label thresholds + icon sizing + road density)
 - [ ] Expand POI set toward “~100 predefined locations” quality (naming, descriptions, regional flavor)
 - [x] Begin replacing procedural overlays with real transparent PNG overlays per asset pipeline doc
-- [x] Add biome decoration variants per biome + deterministic selection to reduce repetition (currently 2 variants per biome)
+- [x] Add biome decoration variants per biome + deterministic selection to reduce repetition (currently 4 variants per biome)
 - [ ] Scale biome asset variety to reduce repetition:
   - [ ] Micro decor: 6 variants per biome (64x64)
   - [ ] Macro decor: 2 variants per biome (256x256)

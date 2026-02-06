@@ -78,7 +78,7 @@ To align with the spec’s “hybrid approach” (tile base + overlay sprites), 
    - Label thresholds: confirm desktop and mobile “default fit” shows the right subset.
 2. **Biome richness**
    - Current:
-     - 2 micro decoration overlay variants per biome (64x64) selected deterministically per POI.
+     - 4 micro decoration overlay variants per biome (64x64) selected deterministically per POI.
      - Generic POI icon sprites per `LocationType`.
    - Next (make this the source-of-truth target for “variety”):
      - Micro decorations: **6 variants per biome** (64x64).
