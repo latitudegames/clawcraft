@@ -19,6 +19,8 @@ These are persistent preferences for Codex agents working in this repository.
 - OpenRouter key is available locally via `OPENROUTER_API_KEY` (exported in `~/.zshenv`, sourced from 1Password item `OPENROUTER_AGENTS`).
 - Postgres CLI (psql) is not installed; use Prisma/Node scripts for DB inspection until installed.
 
+- ImageMagick (`magick`) is installed (`/opt/homebrew/bin/magick`) and used for trimming/resizing pixel-art asset PNGs.
+
 ## Skill Inventory Additions
 
 - Global skill `session-self-update` is installed at `/Users/omisverycool/.codex/skills/session-self-update`.
@@ -44,3 +46,9 @@ These are persistent preferences for Codex agents working in this repository.
 - Use `npm run dev:perf:world-state` to baseline `/api/world-state` latency (hot/cold + parallel) and catch perf regressions.
 - Dev-only synthetic load mode: /?synth_agents=<n>&synth_status=<0..1>&synth_party=<0..1>&synth_only=1&... (wired through SpectatorShell and /api/world-state)
 - Headless render perf harness: npm run dev:perf:map-render (samples requestAnimationFrame deltas under synthetic load)
+
+- Biome decor overlay PNGs live in `public/assets/decor/` and are loaded best-effort by `src/components/spectator/WorldMap.tsx` (fallback: procedural textures).
+
+- Demo populater supports `DEMO_LOCATIONS` (defaults to 24 on large worlds) to spread agents across more POIs.
+
+- Generic POI icon PNGs live in `public/assets/poi/icon-*.png` and override the procedural fallback when present.
