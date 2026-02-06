@@ -28,7 +28,7 @@ async function computeWorldState(): Promise<WorldStateResponse> {
   const now = new Date();
 
   const locations = await prisma.location.findMany({
-    select: { id: true, name: true, type: true, x: true, y: true }
+    select: { id: true, name: true, type: true, biomeTag: true, x: true, y: true }
   });
 
   const rawConnections = await prisma.locationConnection.findMany({
@@ -75,6 +75,7 @@ async function computeWorldState(): Promise<WorldStateResponse> {
       id: l.id,
       name: l.name,
       type: l.type,
+      biome_tag: l.biomeTag ?? null,
       x: l.x,
       y: l.y
     })),

@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import { Application, Assets, Container, Graphics, Sprite, Text, Texture, TextureStyle } from "pixi.js";
 import type { PointerEvent, WheelEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -9,7 +10,8 @@ import { groupBubbleCandidates, selectBubbleGroups } from "@/lib/ui/bubble-group
 import { layoutBubbles } from "@/lib/ui/bubble-layout";
 import { computeCenterTransform, computeFitTransform, type CameraTransform } from "@/lib/ui/camera";
 import { computeClusterOffsets } from "@/lib/ui/cluster-layout";
-import { bubbleLimitForScale, shouldShowAgentLabels, shouldShowLocationLabels } from "@/lib/ui/declutter";
+import { bubbleLimitForScale, shouldShowLocationLabels } from "@/lib/ui/declutter";
+import { computePartyFanOutOffsets } from "@/lib/ui/party-fanout";
 import { computeRoadPolyline } from "@/lib/ui/roads";
 import type { AgentSpriteKey } from "@/lib/ui/sprites";
 import { AGENT_SPRITE_KEYS, agentSpriteKeyForUsername } from "@/lib/ui/sprites";
@@ -26,7 +28,39 @@ const AGENT_SPRITE_SIZE_WORLD = 64 * AGENT_SPRITE_SCALE;
 const POI_ICON_SCALE = 0.25;
 const POI_ICON_SIZE_WORLD = 128 * POI_ICON_SCALE;
 const BUBBLE_MAX_WIDTH_PX = 180;
+const PARTY_BUBBLE_MAX_WIDTH_PX = 240;
 const AGENT_CLUSTER_RADIUS_WORLD = 10;
+const PARTY_HOVER_FAN_OUT_RADIUS_WORLD = 12;
+const POI_HIT_RADIUS_PX = 24;
+
+function fitViewportCamera(args: {
+  bounds: { minX: number; minY: number; maxX: number; maxY: number };
+  viewport: { width: number; height: number };
+  rightInset: number;
+  padding: number;
+}) {
+  const inset = Math.max(0, args.rightInset);
+  const effectiveViewport = {
+    width: Math.max(1, args.viewport.width - inset),
+    height: args.viewport.height
+  };
+
+  const fit = computeFitTransform({
+    bounds: args.bounds,
+    viewport: effectiveViewport,
+    padding: args.padding
+  });
+  const scale = clamp(fit.scale, 0.5, 6);
+  if (scale === fit.scale) return fit;
+
+  const cx = (args.bounds.minX + args.bounds.maxX) / 2;
+  const cy = (args.bounds.minY + args.bounds.maxY) / 2;
+  return computeCenterTransform({
+    viewport: effectiveViewport,
+    world: { x: cx, y: cy },
+    scale
+  });
+}
 
 function colorForLocationType(type: string): number {
   switch (type) {
@@ -45,6 +79,29 @@ function colorForLocationType(type: string): number {
   }
 }
 
+function colorForBiomeTag(tag: string | null | undefined): number {
+  switch (tag) {
+    case "plains":
+      return 0x7ec850;
+    case "forest":
+      return 0x5b8c3e;
+    case "cave":
+      return 0x8b9bb4;
+    case "ruins":
+      return 0x8b9bb4;
+    case "mountain":
+      return 0x8b9bb4;
+    case "snow":
+      return 0xf0f4f8;
+    case "water":
+      return 0x6ccff6;
+    case "desert":
+      return 0xe8d170;
+    default:
+      return 0x7ec850;
+  }
+}
+
 const POI_ICON_KEYS = ["kings-landing", "whispering-woods", "goblin-cave", "ancient-library", "dragon-peak"] as const;
 type PoiIconKey = (typeof POI_ICON_KEYS)[number];
 
@@ -59,7 +116,10 @@ function slugifyPoiName(name: string): string {
 type PixiScene = {
   app: Application;
   world: Container;
-  mapGraphics: Graphics;
+  terrainGraphics: Graphics;
+  pathGraphics: Graphics;
+  poiMarkerGraphics: Graphics;
+  agentMarkerGraphics: Graphics;
   poiSprites: Container;
   locationLabels: Container;
   agentSprites: Container;
@@ -67,6 +127,8 @@ type PixiScene = {
   agentTextures: Map<AgentSpriteKey, Texture>;
   poiTextures: Map<PoiIconKey, Texture>;
   spritesByUsername: Map<string, Sprite>;
+  poiSpritesByLocationId: Map<string, Sprite>;
+  locationLabelsById: Map<string, Text>;
 };
 
 export function WorldMap({
@@ -103,9 +165,57 @@ export function WorldMap({
 
   const [camera, setCamera] = useState<CameraTransform>({ scale: 1, x: 0, y: 0 });
   const [assetsVersion, setAssetsVersion] = useState(0);
+  const [sceneVersion, setSceneVersion] = useState(0);
   const didInitCamera = useRef(false);
   const focusedFor = useRef<string | null>(null);
   const pixi = useRef<PixiScene | null>(null);
+  const [hoverPoiId, setHoverPoiId] = useState<string | null>(null);
+  const [pinnedPoiId, setPinnedPoiId] = useState<string | null>(null);
+  const [hoverPartyRunId, setHoverPartyRunId] = useState<string | null>(null);
+  const desktopRightInsetPx = size.width >= 1024 ? 320 : 0;
+  const effectiveViewport = useMemo(
+    () => ({ width: Math.max(1, size.width - desktopRightInsetPx), height: size.height }),
+    [desktopRightInsetPx, size.height, size.width]
+  );
+
+  const partyMembersByRun = useMemo(() => {
+    const byRun = new Map<string, string[]>();
+    for (const agent of world.agents) {
+      if (!agent.run_id) continue;
+      const members = byRun.get(agent.run_id);
+      if (members) members.push(agent.username);
+      else byRun.set(agent.run_id, [agent.username]);
+    }
+
+    for (const [runId, members] of byRun.entries()) {
+      if (members.length > 1) continue;
+      byRun.delete(runId);
+    }
+
+    return byRun;
+  }, [world.agents]);
+
+  const partyFanOutOffsets = useMemo(() => {
+    if (!hoverPartyRunId) return new Map<string, { dx: number; dy: number }>();
+    const members = partyMembersByRun.get(hoverPartyRunId);
+    if (!members || members.length <= 1) return new Map<string, { dx: number; dy: number }>();
+
+    return computePartyFanOutOffsets(members, { radius: PARTY_HOVER_FAN_OUT_RADIUS_WORLD });
+  }, [hoverPartyRunId, partyMembersByRun]);
+
+  const displayOffsets = useMemo(() => {
+    const merged = new Map<string, { dx: number; dy: number }>();
+    for (const agent of world.agents) {
+      const base = agentOffsets.get(agent.username) ?? { dx: 0, dy: 0 };
+      const fan =
+        hoverPartyRunId && agent.run_id === hoverPartyRunId ? partyFanOutOffsets.get(agent.username) ?? { dx: 0, dy: 0 } : null;
+      merged.set(agent.username, {
+        dx: base.dx + (fan?.dx ?? 0),
+        dy: base.dy + (fan?.dy ?? 0)
+      });
+    }
+    return merged;
+  }, [agentOffsets, hoverPartyRunId, partyFanOutOffsets, world.agents]);
 
   useEffect(() => {
     const host = canvasHostRef.current;
@@ -132,15 +242,21 @@ export function WorldMap({
       host.appendChild(app.canvas);
 
       const worldContainer = new Container();
-      const mapGraphics = new Graphics();
+      const terrainGraphics = new Graphics();
+      const pathGraphics = new Graphics();
+      const poiMarkerGraphics = new Graphics();
       const poiSprites = new Container();
       const locationLabels = new Container();
+      const agentMarkerGraphics = new Graphics();
       const agentSprites = new Container();
       const agentLabels = new Container();
 
-      worldContainer.addChild(mapGraphics);
+      worldContainer.addChild(terrainGraphics);
+      worldContainer.addChild(pathGraphics);
+      worldContainer.addChild(poiMarkerGraphics);
       worldContainer.addChild(poiSprites);
       worldContainer.addChild(locationLabels);
+      worldContainer.addChild(agentMarkerGraphics);
       worldContainer.addChild(agentSprites);
       worldContainer.addChild(agentLabels);
 
@@ -149,6 +265,8 @@ export function WorldMap({
       const agentTextures = new Map<AgentSpriteKey, Texture>();
       const poiTextures = new Map<PoiIconKey, Texture>();
       const spritesByUsername = new Map<string, Sprite>();
+      const poiSpritesByLocationId = new Map<string, Sprite>();
+      const locationLabelsById = new Map<string, Text>();
 
       agentSprites.sortableChildren = true;
       poiSprites.sortableChildren = true;
@@ -156,15 +274,22 @@ export function WorldMap({
       pixi.current = {
         app,
         world: worldContainer,
-        mapGraphics,
+        terrainGraphics,
+        pathGraphics,
+        poiMarkerGraphics,
         poiSprites,
         locationLabels,
+        agentMarkerGraphics,
         agentSprites,
         agentLabels,
         agentTextures,
         poiTextures,
-        spritesByUsername
+        spritesByUsername,
+        poiSpritesByLocationId,
+        locationLabelsById
       };
+      // Ensure follow-up effects (resize/camera sync/draw) re-run after Pixi scene exists.
+      setSceneVersion((v) => v + 1);
 
       void Promise.all([
         ...AGENT_SPRITE_KEYS.map(async (key) => {
@@ -208,35 +333,38 @@ export function WorldMap({
     if (!scene) return;
     if (size.width <= 0 || size.height <= 0) return;
     scene.app.renderer.resize(size.width, size.height);
-  }, [size.height, size.width]);
+  }, [sceneVersion, size.height, size.width]);
 
   useEffect(() => {
     const scene = pixi.current;
     if (!scene) return;
     scene.world.position.set(camera.x, camera.y);
     scene.world.scale.set(camera.scale);
-  }, [camera.scale, camera.x, camera.y]);
+  }, [sceneVersion, camera.scale, camera.x, camera.y]);
 
   useEffect(() => {
     const scene = pixi.current;
     if (!scene) return;
     scene.locationLabels.visible = shouldShowLocationLabels(camera.scale);
-    scene.agentLabels.visible = shouldShowAgentLabels(camera.scale);
-  }, [camera.scale]);
+    // Agent names are already present in speech bubbles; keep labels limited to the focused agent
+    // to reduce clutter and match the design spec.
+    scene.agentLabels.visible = Boolean(focusUsername);
+  }, [sceneVersion, camera.scale, focusUsername]);
 
   useEffect(() => {
     if (didInitCamera.current) return;
     if (!bounds) return;
     if (size.width <= 0 || size.height <= 0) return;
 
-    const fit = computeFitTransform({
+    const next = fitViewportCamera({
       viewport: { width: size.width, height: size.height },
+      rightInset: desktopRightInsetPx,
       bounds,
       padding: 48
     });
-    setCamera({ scale: clamp(fit.scale, 0.5, 6), x: fit.x, y: fit.y });
+    setCamera(next);
     didInitCamera.current = true;
-  }, [bounds, size.height, size.width]);
+  }, [bounds, desktopRightInsetPx, size.height, size.width]);
 
   useEffect(() => {
     if (!focusUsername) {
@@ -247,32 +375,46 @@ export function WorldMap({
     if (size.width <= 0 || size.height <= 0) return;
 
     const agent = world.agents.find((a) => a.username === focusUsername);
-    const agentOffset = agent ? agentOffsets.get(agent.username) : null;
+    const agentOffset = agent ? displayOffsets.get(agent.username) : null;
     const agentX = typeof agent?.x === "number" ? (agent.x as number) + (agentOffset?.dx ?? 0) : null;
     const agentY = typeof agent?.y === "number" ? (agent.y as number) + (agentOffset?.dy ?? 0) : null;
     if (typeof agentX !== "number" || typeof agentY !== "number") return;
 
     setCamera((prev) =>
       computeCenterTransform({
-        viewport: { width: size.width, height: size.height },
+        viewport: effectiveViewport,
         world: { x: agentX, y: agentY },
         scale: prev.scale
       })
     );
     didInitCamera.current = true;
     focusedFor.current = focusUsername;
-  }, [agentOffsets, focusUsername, size.height, size.width, world.agents]);
+  }, [displayOffsets, effectiveViewport, focusUsername, size.height, size.width, world.agents]);
 
   useEffect(() => {
     const scene = pixi.current;
     if (!scene) return;
 
-    scene.mapGraphics.clear();
-    scene.poiSprites.removeChildren().forEach((c) => c.destroy());
-    scene.locationLabels.removeChildren().forEach((c) => c.destroy());
-    scene.agentLabels.removeChildren().forEach((c) => c.destroy());
+    scene.terrainGraphics.clear();
+    scene.pathGraphics.clear();
+    scene.poiMarkerGraphics.clear();
 
     const locById = new Map(world.locations.map((l) => [l.id, l]));
+
+    for (const l of world.locations) {
+      if (typeof l.x !== "number" || typeof l.y !== "number") continue;
+
+      // Terrain layer: draw a soft "biome patch" around each POI. This is a light-weight
+      // stand-in for the spec's tilemap + overlay approach and improves map readability.
+      const biomeColor = colorForBiomeTag(l.biome_tag);
+      const radius = l.type === "major_city" ? 170 : l.type === "town" ? 145 : 130;
+      scene.terrainGraphics.circle(l.x, l.y, radius).fill({ color: biomeColor, alpha: 0.07 });
+      scene.terrainGraphics.circle(l.x, l.y, Math.round(radius * 0.58)).fill({ color: biomeColor, alpha: 0.09 });
+
+      // Add a faint warm shadow ring to keep patches from feeling too flat.
+      scene.terrainGraphics.circle(l.x, l.y, Math.round(radius * 0.82)).stroke({ width: 10, color: 0x4a3728, alpha: 0.02 });
+    }
+
     for (const edge of world.connections) {
       const from = locById.get(edge.from_id);
       const to = locById.get(edge.to_id);
@@ -288,62 +430,134 @@ export function WorldMap({
       const drawPath = () => {
         const start = points[0];
         if (!start) return;
-        scene.mapGraphics.moveTo(start.x, start.y);
+        scene.pathGraphics.moveTo(start.x, start.y);
         for (let i = 1; i < points.length; i++) {
           const p = points[i];
           if (!p) continue;
-          scene.mapGraphics.lineTo(p.x, p.y);
+          scene.pathGraphics.lineTo(p.x, p.y);
         }
       };
 
       // Dirt road with subtle border + highlight (Stardew-ish).
       drawPath();
-      scene.mapGraphics.stroke({ width: 10, color: 0x4a3728, alpha: 0.18 });
+      scene.pathGraphics.stroke({ width: 10, color: 0x4a3728, alpha: 0.18 });
       drawPath();
-      scene.mapGraphics.stroke({ width: 8, color: 0xc9a567, alpha: 0.55 });
+      scene.pathGraphics.stroke({ width: 8, color: 0xc9a567, alpha: 0.55 });
       drawPath();
-      scene.mapGraphics.stroke({ width: 3, color: 0xe8d170, alpha: 0.35 });
+      scene.pathGraphics.stroke({ width: 3, color: 0xe8d170, alpha: 0.35 });
     }
+
+    const seenIds = new Set<string>();
 
     for (const l of world.locations) {
       if (typeof l.x !== "number" || typeof l.y !== "number") continue;
+      seenIds.add(l.id);
 
-      scene.mapGraphics.circle(l.x, l.y + 10, 12).fill({ color: 0x000000, alpha: 0.1 });
+      scene.poiMarkerGraphics.circle(l.x, l.y + 10, 12).fill({ color: 0x000000, alpha: 0.1 });
 
       const poiKey = slugifyPoiName(l.name) as PoiIconKey;
       const texture = scene.poiTextures.get(poiKey);
 
       if (texture) {
-        const icon = new Sprite(texture);
-        icon.anchor.set(0.5, 0.5);
-        icon.scale.set(POI_ICON_SCALE);
+        const existing = scene.poiSpritesByLocationId.get(l.id) ?? null;
+        const icon = existing ?? new Sprite(texture);
+        if (!existing) {
+          icon.anchor.set(0.5, 0.5);
+          icon.scale.set(POI_ICON_SCALE);
+          scene.poiSprites.addChild(icon);
+          scene.poiSpritesByLocationId.set(l.id, icon);
+        } else if (icon.texture !== texture) {
+          icon.texture = texture;
+        }
         icon.position.set(l.x, l.y);
         icon.zIndex = l.y;
-        scene.poiSprites.addChild(icon);
       } else {
-        scene.mapGraphics.circle(l.x, l.y, 7).fill({ color: colorForLocationType(l.type), alpha: 0.95 });
-        scene.mapGraphics.circle(l.x, l.y, 7).stroke({ width: 2, color: 0x4a3728, alpha: 0.35 });
+        const existing = scene.poiSpritesByLocationId.get(l.id);
+        if (existing) {
+          existing.parent?.removeChild(existing);
+          existing.destroy();
+          scene.poiSpritesByLocationId.delete(l.id);
+        }
+
+        scene.poiMarkerGraphics.circle(l.x, l.y, 7).fill({ color: colorForLocationType(l.type), alpha: 0.95 });
+        scene.poiMarkerGraphics.circle(l.x, l.y, 7).stroke({ width: 2, color: 0x4a3728, alpha: 0.35 });
       }
 
-      const label = new Text({
-        text: l.name,
-        style: { fill: 0x4a3728, fontSize: 12, fontWeight: "600" }
-      });
-      label.position.set(l.x + (texture ? POI_ICON_SIZE_WORLD / 2 + 8 : 10), l.y - (texture ? POI_ICON_SIZE_WORLD / 2 + 2 : 10));
-      scene.locationLabels.addChild(label);
+      const labelOffsetX = texture ? POI_ICON_SIZE_WORLD / 2 + 8 : 10;
+      const labelOffsetY = texture ? POI_ICON_SIZE_WORLD / 2 + 2 : 10;
+
+      const existingLabel = scene.locationLabelsById.get(l.id) ?? null;
+      const label =
+        existingLabel ?? new Text({ text: l.name, style: { fill: 0x4a3728, fontSize: 12, fontWeight: "600" } });
+      if (!existingLabel) {
+        scene.locationLabels.addChild(label);
+        scene.locationLabelsById.set(l.id, label);
+      } else if (label.text !== l.name) {
+        label.text = l.name;
+      }
+      label.position.set(l.x + labelOffsetX, l.y - labelOffsetY);
     }
+
+    for (const [locationId, icon] of scene.poiSpritesByLocationId.entries()) {
+      if (seenIds.has(locationId)) continue;
+      icon.parent?.removeChild(icon);
+      icon.destroy();
+      scene.poiSpritesByLocationId.delete(locationId);
+    }
+
+    for (const [locationId, label] of scene.locationLabelsById.entries()) {
+      if (seenIds.has(locationId)) continue;
+      label.parent?.removeChild(label);
+      label.destroy();
+      scene.locationLabelsById.delete(locationId);
+    }
+  }, [sceneVersion, assetsVersion, world.connections, world.locations]);
+
+  useEffect(() => {
+    const scene = pixi.current;
+    if (!scene) return;
+    if (camera.scale <= 0) return;
+
+    const invScale = 1 / camera.scale;
+    for (const l of world.locations) {
+      if (typeof l.x !== "number" || typeof l.y !== "number") continue;
+      const label = scene.locationLabelsById.get(l.id);
+      if (!label) continue;
+
+      const poiKey = slugifyPoiName(l.name) as PoiIconKey;
+      const hasIcon = Boolean(scene.poiTextures.get(poiKey));
+      const iconRadiusWorld = hasIcon ? POI_ICON_SIZE_WORLD / 2 : 7;
+
+      // Keep text screen-sized while positioning it in world-space. The padding should be in
+      // screen pixels so labels don't drift away when zooming in.
+      const padXPx = hasIcon ? 8 : 10;
+      const padYPx = hasIcon ? 4 : 10;
+      label.scale.set(invScale);
+      label.position.set(l.x + iconRadiusWorld + padXPx * invScale, l.y - iconRadiusWorld - padYPx * invScale);
+    }
+  }, [sceneVersion, assetsVersion, camera.scale, world.locations]);
+
+  useEffect(() => {
+    const scene = pixi.current;
+    if (!scene) return;
+
+    scene.agentMarkerGraphics.clear();
+    scene.agentLabels.removeChildren().forEach((c) => c.destroy());
+
+    const labelUsernames = new Set<string>();
+    if (focusUsername) labelUsernames.add(focusUsername);
 
     for (const a of world.agents) {
       if (typeof a.x !== "number" || typeof a.y !== "number") continue;
 
-      const offset = agentOffsets.get(a.username);
+      const offset = displayOffsets.get(a.username);
       const ax = (a.x as number) + (offset?.dx ?? 0);
       const ay = (a.y as number) + (offset?.dy ?? 0);
 
       const isFocused = Boolean(focusUsername && a.username === focusUsername);
       const radius = isFocused ? 6 : 4;
 
-      scene.mapGraphics.circle(ax, ay, 8).fill({ color: 0x000000, alpha: 0.12 });
+      scene.agentMarkerGraphics.circle(ax, ay, 8).fill({ color: 0x000000, alpha: 0.12 });
 
       const spriteKey = agentSpriteKeyForUsername(a.username);
       const texture = scene.agentTextures.get(spriteKey);
@@ -356,24 +570,30 @@ export function WorldMap({
           next.scale.set(AGENT_SPRITE_SCALE);
           scene.agentSprites.addChild(next);
           scene.spritesByUsername.set(a.username, next);
+        } else if (next.texture !== texture) {
+          next.texture = texture;
         }
         next.alpha = a.traveling ? 0.85 : 1;
         next.position.set(ax, ay);
         next.zIndex = ay;
       } else {
-        scene.mapGraphics.circle(ax, ay, radius).fill({ color: a.traveling ? 0x87ceeb : 0xff6b6b, alpha: 0.95 });
+        scene.agentMarkerGraphics.circle(ax, ay, radius).fill({ color: a.traveling ? 0x87ceeb : 0xff6b6b, alpha: 0.95 });
       }
 
       if (isFocused) {
-        scene.mapGraphics.circle(ax, ay, radius + 6).stroke({ width: 3, color: 0xffd859, alpha: 0.9 });
+        scene.agentMarkerGraphics.circle(ax, ay, radius + 6).stroke({ width: 3, color: 0xffd859, alpha: 0.9 });
       }
 
-      const label = new Text({
-        text: a.guild_tag ? `${a.username} [${a.guild_tag}]` : a.username,
-        style: { fill: 0x4a3728, fontSize: isFocused ? 12 : 11, fontWeight: isFocused ? "700" : "400" }
-      });
-      label.position.set(ax + 10, ay + 8);
-      scene.agentLabels.addChild(label);
+      if (labelUsernames.has(a.username)) {
+        const invScale = camera.scale > 0 ? 1 / camera.scale : 1;
+        const label = new Text({
+          text: a.guild_tag ? `${a.username} [${a.guild_tag}]` : a.username,
+          style: { fill: 0x4a3728, fontSize: isFocused ? 12 : 11, fontWeight: isFocused ? "700" : "400" }
+        });
+        label.scale.set(invScale);
+        label.position.set(ax + 10 * invScale, ay - AGENT_SPRITE_SIZE_WORLD - 8 * invScale);
+        scene.agentLabels.addChild(label);
+      }
     }
 
     const seen = new Set(world.agents.map((a) => a.username));
@@ -382,14 +602,114 @@ export function WorldMap({
       sprite.destroy({ children: true });
       scene.spritesByUsername.delete(username);
     }
-  }, [agentOffsets, assetsVersion, focusUsername, world.agents, world.connections, world.locations]);
+  }, [sceneVersion, assetsVersion, camera.scale, displayOffsets, focusUsername, world.agents]);
 
   const drag = useRef<
     null | { pointerId: number; startClientX: number; startClientY: number; baseX: number; baseY: number; moved: boolean }
   >(null);
+  const pointers = useRef(new Map<number, { clientX: number; clientY: number }>());
+  const pinch = useRef<
+    | null
+    | {
+        a: number;
+        b: number;
+        startDistance: number;
+        startScale: number;
+        worldX: number;
+        worldY: number;
+      }
+  >(null);
+  const ignoreTapUntilMs = useRef(0);
+
+  const nearestPoiAt = (worldX: number, worldY: number) => {
+    const hitRadiusWorld = POI_HIT_RADIUS_PX / camera.scale;
+    const hitRadius2 = hitRadiusWorld * hitRadiusWorld;
+
+    let picked: { id: string; dist2: number } | null = null;
+    for (const l of world.locations) {
+      if (typeof l.x !== "number" || typeof l.y !== "number") continue;
+      const dx = l.x - worldX;
+      const dy = l.y - worldY;
+      const dist2 = dx * dx + dy * dy;
+      if (!picked || dist2 < picked.dist2) picked = { id: l.id, dist2 };
+    }
+
+    if (!picked || picked.dist2 > hitRadius2) return null;
+    return picked.id;
+  };
+
+  const nearestAgentAt = (worldX: number, worldY: number) => {
+    const hitRadiusWorld = 24 / camera.scale;
+    const hitRadius2 = hitRadiusWorld * hitRadiusWorld;
+
+    let picked: { username: string; runId: string | null; dist2: number } | null = null;
+    for (const a of world.agents) {
+      if (typeof a.x !== "number" || typeof a.y !== "number") continue;
+      const offset = displayOffsets.get(a.username);
+      const cx = (a.x as number) + (offset?.dx ?? 0);
+      const cy = (a.y as number) + (offset?.dy ?? 0) - AGENT_SPRITE_SIZE_WORLD / 2;
+      const dx = cx - worldX;
+      const dy = cy - worldY;
+      const dist2 = dx * dx + dy * dy;
+      if (!picked || dist2 < picked.dist2) picked = { username: a.username, runId: a.run_id, dist2 };
+    }
+
+    if (!picked || picked.dist2 > hitRadius2) return null;
+    return picked;
+  };
+
+  const updateHoverTargets = (e: PointerEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const cursorX = e.clientX - rect.left;
+    const cursorY = e.clientY - rect.top;
+    const worldX = (cursorX - camera.x) / camera.scale;
+    const worldY = (cursorY - camera.y) / camera.scale;
+
+    const agentHit = nearestAgentAt(worldX, worldY);
+    const partyRunId = agentHit?.runId ?? null;
+    const hasParty = partyRunId ? (partyMembersByRun.get(partyRunId)?.length ?? 0) > 1 : false;
+    if (partyRunId && hasParty) {
+      if (hoverPartyRunId !== partyRunId) setHoverPartyRunId(partyRunId);
+      if (hoverPoiId !== null) setHoverPoiId(null);
+      return;
+    }
+
+    if (hoverPartyRunId !== null) setHoverPartyRunId(null);
+    const poiId = nearestPoiAt(worldX, worldY);
+    setHoverPoiId(poiId);
+  };
 
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId);
+    pointers.current.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
+
+    // Two-pointer gestures take over from single-pointer drag (pinch-to-zoom + two-finger pan).
+    if (pointers.current.size === 2) {
+      const ids = Array.from(pointers.current.keys());
+      const a = ids[0];
+      const b = ids[1];
+      if (typeof a !== "number" || typeof b !== "number") return;
+      const pa = pointers.current.get(a);
+      const pb = pointers.current.get(b);
+      if (!pa || !pb) return;
+
+      const startDistance = Math.max(1, Math.hypot(pa.clientX - pb.clientX, pa.clientY - pb.clientY));
+      const rect = e.currentTarget.getBoundingClientRect();
+      const midX = (pa.clientX + pb.clientX) / 2 - rect.left;
+      const midY = (pa.clientY + pb.clientY) / 2 - rect.top;
+      const worldX = (midX - camera.x) / camera.scale;
+      const worldY = (midY - camera.y) / camera.scale;
+
+      pinch.current = { a, b, startDistance, startScale: camera.scale, worldX, worldY };
+      drag.current = null;
+      didInitCamera.current = true;
+      ignoreTapUntilMs.current = Date.now() + 400;
+      if (hoverPoiId !== null) setHoverPoiId(null);
+      if (hoverPartyRunId !== null) setHoverPartyRunId(null);
+      return;
+    }
+    if (pointers.current.size > 2) return;
+
     drag.current = {
       pointerId: e.pointerId,
       startClientX: e.clientX,
@@ -402,24 +722,87 @@ export function WorldMap({
   };
 
   const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
-    if (!drag.current || drag.current.pointerId !== e.pointerId) return;
-    const dx = e.clientX - drag.current.startClientX;
-    const dy = e.clientY - drag.current.startClientY;
-    if (!drag.current.moved) {
-      if (Math.hypot(dx, dy) <= 4) return;
-      drag.current.moved = true;
+    pointers.current.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
+
+    const pinchState = pinch.current;
+    if (pinchState && (pinchState.a === e.pointerId || pinchState.b === e.pointerId)) {
+      const pa = pointers.current.get(pinchState.a);
+      const pb = pointers.current.get(pinchState.b);
+      if (!pa || !pb) return;
+      const rect = e.currentTarget.getBoundingClientRect();
+      const midX = (pa.clientX + pb.clientX) / 2 - rect.left;
+      const midY = (pa.clientY + pb.clientY) / 2 - rect.top;
+      const distance = Math.max(1, Math.hypot(pa.clientX - pb.clientX, pa.clientY - pb.clientY));
+      const nextScale = clamp(pinchState.startScale * (distance / pinchState.startDistance), MIN_SCALE, MAX_SCALE);
+      ignoreTapUntilMs.current = Date.now() + 400;
+      didInitCamera.current = true;
+      setCamera({
+        scale: nextScale,
+        x: midX - pinchState.worldX * nextScale,
+        y: midY - pinchState.worldY * nextScale
+      });
+      if (hoverPoiId !== null) setHoverPoiId(null);
+      if (hoverPartyRunId !== null) setHoverPartyRunId(null);
+      return;
     }
-    setCamera((prev) => ({ ...prev, x: drag.current!.baseX + dx, y: drag.current!.baseY + dy }));
+
+    const dragState = drag.current;
+    if (!dragState || dragState.pointerId !== e.pointerId) {
+      updateHoverTargets(e);
+      return;
+    }
+
+    const dx = e.clientX - dragState.startClientX;
+    const dy = e.clientY - dragState.startClientY;
+    if (!dragState.moved) {
+      if (Math.hypot(dx, dy) <= 4) return;
+      dragState.moved = true;
+    }
+    setCamera((prev) => ({ ...prev, x: dragState.baseX + dx, y: dragState.baseY + dy }));
+
+    if (dragState.moved) {
+      if (hoverPoiId !== null) setHoverPoiId(null);
+      if (hoverPartyRunId !== null) setHoverPartyRunId(null);
+      return;
+    }
+    updateHoverTargets(e);
   };
 
   const onPointerUp = (e: PointerEvent<HTMLDivElement>) => {
+    pointers.current.delete(e.pointerId);
+
+    const pinchState = pinch.current;
+    if (pinchState && (pinchState.a === e.pointerId || pinchState.b === e.pointerId)) {
+      // End the pinch gesture when either pointer is released. Avoid treating this as a tap.
+      pinch.current = null;
+      drag.current = null;
+      ignoreTapUntilMs.current = Date.now() + 400;
+
+      // If one pointer remains down, immediately transition back into a drag gesture so panning continues smoothly.
+      if (pointers.current.size === 1) {
+        const [onlyId] = pointers.current.keys();
+        const pos = typeof onlyId === "number" ? pointers.current.get(onlyId) : null;
+        if (typeof onlyId === "number" && pos) {
+          drag.current = {
+            pointerId: onlyId,
+            startClientX: pos.clientX,
+            startClientY: pos.clientY,
+            baseX: camera.x,
+            baseY: camera.y,
+            moved: true
+          };
+        }
+      }
+      return;
+    }
+    if (Date.now() < ignoreTapUntilMs.current) return;
+
     const state = drag.current;
     if (!state || state.pointerId !== e.pointerId) return;
     drag.current = null;
 
     if (state.moved) return;
     if (e.button !== 0) return;
-    if (!onSelectAgent) return;
 
     const rect = e.currentTarget.getBoundingClientRect();
     const cursorX = e.clientX - rect.left;
@@ -428,23 +811,20 @@ export function WorldMap({
     const worldX = (cursorX - camera.x) / camera.scale;
     const worldY = (cursorY - camera.y) / camera.scale;
 
-    const hitRadiusWorld = 24 / camera.scale;
-    const hitRadius2 = hitRadiusWorld * hitRadiusWorld;
-
-    let picked: { username: string; dist2: number } | null = null;
-    for (const a of world.agents) {
-      if (typeof a.x !== "number" || typeof a.y !== "number") continue;
-      const offset = agentOffsets.get(a.username);
-      const cx = (a.x as number) + (offset?.dx ?? 0);
-      const cy = (a.y as number) + (offset?.dy ?? 0) - AGENT_SPRITE_SIZE_WORLD / 2;
-      const dx = cx - worldX;
-      const dy = cy - worldY;
-      const dist2 = dx * dx + dy * dy;
-      if (!picked || dist2 < picked.dist2) picked = { username: a.username, dist2 };
+    const picked = nearestAgentAt(worldX, worldY);
+    if (picked?.username && onSelectAgent) {
+      onSelectAgent(picked.username);
+      if (picked.runId && (partyMembersByRun.get(picked.runId)?.length ?? 0) > 1) {
+        setHoverPartyRunId(picked.runId);
+      }
+      return;
     }
 
-    if (picked && picked.dist2 <= hitRadius2) {
-      onSelectAgent(picked.username);
+    const poiId = nearestPoiAt(worldX, worldY);
+    if (poiId) {
+      setPinnedPoiId((prev) => (prev === poiId ? null : poiId));
+    } else if (pinnedPoiId) {
+      setPinnedPoiId(null);
     }
   };
 
@@ -494,7 +874,7 @@ export function WorldMap({
         const a = candidateByUsername.get(group.representative);
         if (!a) return null;
 
-        const offset = agentOffsets.get(a.username);
+        const offset = displayOffsets.get(a.username);
         const ax = (a.x as number) + (offset?.dx ?? 0);
         const ay = (a.y as number) + (offset?.dy ?? 0);
 
@@ -502,23 +882,34 @@ export function WorldMap({
         const anchorY = (ay - AGENT_SPRITE_SIZE_WORLD) * camera.scale + camera.y;
 
         const labelBase = a.guild_tag ? `${a.username} [${a.guild_tag}]` : a.username;
-        const label = group.members.length > 1 ? `${labelBase} +${group.members.length - 1}` : labelBase;
+        const label = labelBase;
         const text = a.status?.text ?? "";
         const textShort = text.length > 120 ? `${text.slice(0, 120)}…` : text;
+        const maxWidth = group.members.length > 1 ? PARTY_BUBBLE_MAX_WIDTH_PX : BUBBLE_MAX_WIDTH_PX;
 
-        const charsPerLine = 26;
+        let memberSummary: string | null = null;
+        if (group.members.length > 1) {
+          const members = group.members.slice().sort((lhs, rhs) => lhs.localeCompare(rhs));
+          const preview = members.slice(0, 2).join(", ");
+          const remaining = members.length - 2;
+          memberSummary = remaining > 0 ? `with ${preview} +${remaining} others` : `with ${preview}`;
+        }
+
+        const charsPerLine = maxWidth > BUBBLE_MAX_WIDTH_PX ? 34 : 26;
         const lines = Math.max(1, Math.ceil(textShort.length / charsPerLine));
-        const height = 16 + 18 + lines * 16 + 12;
+        const height = 16 + 18 + lines * 16 + (memberSummary ? 18 : 12);
 
         return {
           id: group.id,
           anchorX,
           anchorY,
-          width: BUBBLE_MAX_WIDTH_PX,
+          width: maxWidth,
           height,
           priority: group.id === focusGroupId ? 10 : 0,
           label,
-          text: textShort
+          text: textShort,
+          memberSummary,
+          maxWidth
         };
       })
       .filter(Boolean) as Array<{
@@ -530,10 +921,12 @@ export function WorldMap({
       priority: number;
       label: string;
       text: string;
+      memberSummary: string | null;
+      maxWidth: number;
     }>;
 
     const layout = layoutBubbles({
-      viewport: { width: size.width, height: size.height },
+      viewport: { width: effectiveViewport.width, height: size.height },
       bubbles: bubbleInputs.map(({ id, anchorX, anchorY, width, height, priority }) => ({
         id,
         anchorX,
@@ -558,22 +951,53 @@ export function WorldMap({
       zIndex: number;
       label: string;
       text: string;
+      memberSummary: string | null;
+      maxWidth: number;
     }>;
-  }, [agentOffsets, camera.scale, camera.x, camera.y, focusUsername, size.height, size.width, world.agents]);
+  }, [camera.scale, camera.x, camera.y, displayOffsets, effectiveViewport.width, focusUsername, size.height, size.width, world.agents]);
+
+  const tooltipPoi = useMemo(() => {
+    const activeId = pinnedPoiId ?? hoverPoiId;
+    if (!activeId) return null;
+    const poi = world.locations.find((l) => l.id === activeId);
+    if (!poi) return null;
+    if (typeof poi.x !== "number" || typeof poi.y !== "number") return null;
+    return {
+      ...poi,
+      screenX: poi.x * camera.scale + camera.x,
+      screenY: poi.y * camera.scale + camera.y
+    };
+  }, [camera.scale, camera.x, camera.y, hoverPoiId, pinnedPoiId, world.locations]);
+
+  useEffect(() => {
+    if (!pinnedPoiId) return;
+    if (world.locations.some((l) => l.id === pinnedPoiId)) return;
+    setPinnedPoiId(null);
+  }, [pinnedPoiId, world.locations]);
+
+  useEffect(() => {
+    if (!hoverPartyRunId) return;
+    if ((partyMembersByRun.get(hoverPartyRunId)?.length ?? 0) > 1) return;
+    setHoverPartyRunId(null);
+  }, [hoverPartyRunId, partyMembersByRun]);
 
   return (
     <div
       ref={ref}
-      className="cc-terrain-grass relative h-[560px] w-full overflow-hidden rounded-md border border-parchment-dark/70 shadow-inner"
+      className="cc-terrain-grass relative h-full w-full select-none overflow-hidden touch-none"
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
       onWheel={onWheel}
+      onPointerLeave={() => {
+        setHoverPoiId(null);
+        setHoverPartyRunId(null);
+      }}
     >
       <div ref={canvasHostRef} className="absolute inset-0" />
 
-      <div className="pointer-events-none absolute left-3 top-3 rounded-md border border-parchment-dark/70 bg-white/80 px-2 py-1 text-xs text-ink-brown shadow-sm">
+      <div className="cc-glass pointer-events-none absolute left-4 top-20 rounded-md px-2 py-1 text-xs text-ink-brown lg:top-4">
         Drag to pan • Scroll/+/- to zoom{onSelectAgent ? " • Click an agent for details" : ""}
       </div>
 
@@ -582,14 +1006,14 @@ export function WorldMap({
         onPointerDown={(e) => e.stopPropagation()}
         onWheel={(e) => e.stopPropagation()}
       >
-        <div className="flex overflow-hidden rounded-md border border-black/10 bg-white/80 text-xs text-ink-brown shadow-sm backdrop-blur">
+        <div className="cc-glass flex overflow-hidden rounded-md text-xs text-ink-brown shadow-sm">
           <button
             type="button"
             className="px-3 py-2 hover:bg-white"
             aria-label="Zoom in"
             onClick={() => {
               didInitCamera.current = true;
-              const cx = size.width / 2;
+              const cx = effectiveViewport.width / 2;
               const cy = size.height / 2;
 
               setCamera((prev) => {
@@ -608,7 +1032,7 @@ export function WorldMap({
             aria-label="Zoom out"
             onClick={() => {
               didInitCamera.current = true;
-              const cx = size.width / 2;
+              const cx = effectiveViewport.width / 2;
               const cy = size.height / 2;
 
               setCamera((prev) => {
@@ -630,12 +1054,13 @@ export function WorldMap({
               if (size.width <= 0 || size.height <= 0) return;
               didInitCamera.current = true;
 
-              const fit = computeFitTransform({
+              const next = fitViewportCamera({
                 viewport: { width: size.width, height: size.height },
+                rightInset: desktopRightInsetPx,
                 bounds,
                 padding: 48
               });
-              setCamera({ scale: clamp(fit.scale, 0.5, 6), x: fit.x, y: fit.y });
+              setCamera(next);
             }}
           >
             Reset
@@ -648,7 +1073,7 @@ export function WorldMap({
             className="rounded-md border border-black/10 bg-white/80 px-3 py-2 text-xs text-ink-brown shadow-sm backdrop-blur hover:bg-white"
             onClick={() => {
               const agent = world.agents.find((a) => a.username === focusUsername);
-              const agentOffset = agent ? agentOffsets.get(agent.username) : null;
+              const agentOffset = agent ? displayOffsets.get(agent.username) : null;
               const agentX = typeof agent?.x === "number" ? (agent.x as number) + (agentOffset?.dx ?? 0) : null;
               const agentY = typeof agent?.y === "number" ? (agent.y as number) + (agentOffset?.dy ?? 0) : null;
               if (typeof agentX !== "number" || typeof agentY !== "number") return;
@@ -657,7 +1082,7 @@ export function WorldMap({
               didInitCamera.current = true;
               setCamera((prev) =>
                 computeCenterTransform({
-                  viewport: { width: size.width, height: size.height },
+                  viewport: effectiveViewport,
                   world: { x: agentX, y: agentY },
                   scale: prev.scale
                 })
@@ -669,25 +1094,65 @@ export function WorldMap({
         ) : null}
       </div>
 
-      {bubbles.map((bubble) => (
-        <div
-          key={`bubble:${bubble.id}`}
-          className="pointer-events-none absolute"
-          style={{
-            left: bubble.left,
-            top: bubble.top,
-            zIndex: bubble.zIndex,
-            transform: "translate(-50%, -100%)",
-            transition: "left 140ms ease, top 140ms ease"
-          }}
-        >
-          <div className="relative max-w-[180px] rounded-xl border border-[#E0D5C5] bg-[#FFF9F0] px-3 py-2 text-xs text-ink-brown shadow-sm">
-            <div className="mb-1 truncate text-[11px] font-semibold opacity-80">{bubble.label}</div>
-            <div className="break-words">{bubble.text}</div>
-            <div className="absolute left-1/2 top-full h-3 w-3 -translate-x-1/2 -translate-y-1 rotate-45 border border-[#E0D5C5] bg-[#FFF9F0]" />
-          </div>
-        </div>
-      ))}
+      <AnimatePresence initial={false}>
+        {bubbles.map((bubble) => (
+          <motion.div
+            key={`bubble:${bubble.id}`}
+            className="pointer-events-none absolute"
+            style={{
+              left: bubble.left,
+              top: bubble.top,
+              zIndex: bubble.zIndex,
+              transform: "translate(-50%, -100%)",
+              transition: "left 140ms ease, top 140ms ease"
+            }}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+          >
+            <div
+              className="relative rounded-xl border border-[#E0D5C5] bg-[#FFF9F0] px-3 py-2 text-xs text-ink-brown shadow-sm"
+              style={{ maxWidth: bubble.maxWidth }}
+            >
+              <div className="mb-1 truncate text-[11px] font-semibold opacity-80">{bubble.label}</div>
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={`${bubble.id}:${bubble.text}`}
+                  initial={{ opacity: 0.35 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0.45 }}
+                  transition={{ duration: 0.15, ease: "easeOut" }}
+                >
+                  <div className="break-words">{bubble.text}</div>
+                  {bubble.memberSummary ? <div className="mt-1 text-[11px] opacity-70">{bubble.memberSummary}</div> : null}
+                </motion.div>
+              </AnimatePresence>
+              <div className="absolute left-1/2 top-full h-3 w-3 -translate-x-1/2 -translate-y-1 rotate-45 border border-[#E0D5C5] bg-[#FFF9F0]" />
+            </div>
+          </motion.div>
+        ))}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {tooltipPoi ? (
+          <motion.div
+            key={tooltipPoi.id}
+            className="pointer-events-none absolute z-20"
+            style={{ left: tooltipPoi.screenX, top: tooltipPoi.screenY, transform: "translate(-50%, calc(-100% - 10px))" }}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -2 }}
+            transition={{ duration: 0.12, ease: "easeOut" }}
+          >
+            <div className="rounded-md border border-parchment-dark/70 bg-[#FFF9F0] px-2 py-1 text-[11px] text-ink-brown shadow-sm">
+              <div className="font-semibold">{tooltipPoi.name}</div>
+              <div className="text-ink-muted">{tooltipPoi.type.replace(/_/g, " ")}</div>
+              {tooltipPoi.biome_tag ? <div className="text-ink-muted">{tooltipPoi.biome_tag}</div> : null}
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }

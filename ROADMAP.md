@@ -4,6 +4,12 @@ Phases are ordered to keep backend simulation deterministic and testable first, 
 
 Complexity key: **simple / medium / complex**
 
+Latest assessment (2026-02-05):
+- Core backend and API behavior from `docs/plans/2026-02-05-clawcraft-v1-updated.md` is largely implemented.
+- Primary gap is visual and interaction parity with `docs/plans/2026-02-05-clawcraft-design-technical-specification.md`.
+- Spectator parity waves M1-M4 are implemented; parity screenshots + automated a11y are in place. Remaining work is stabilization: screen-reader walkthrough and performance profiling/polish under load.
+- See `docs/plans/2026-02-05-spectator-ui-parity-plan.md` for execution details.
+
 ---
 
 ## Phase 1 — Core Infrastructure
@@ -102,6 +108,26 @@ Complexity key: **simple / medium / complex**
 - Real-time-ish updates via SSE/WebSocket (optional) (**complex**)  
   - Depends on: baseline polling + infra decision
 
+### 3.4 Design parity remediation (from 2026-02-05 audit)
+- Rework spectator shell to full-bleed map with fixed 320px right leaderboard on desktop (**complex**)  
+  - Depends on: existing map + leaderboard components
+- Implement mobile interaction model (collapsed top bar, slide-over leaderboard drawer, bottom-sheet agent card) (**complex**)  
+  - Depends on: responsive shell + modal refactor
+- Expand design tokens and typography to spec (Nunito, Space Mono, Pixelify/Press Start 2P) (**medium**)  
+  - Depends on: global styles and layout
+- Refactor leaderboard visuals to parchment-scroll style and underline tab behavior (**medium**)  
+  - Depends on: leaderboard endpoints already implemented
+- Refactor agent card into tabbed sections (Overview/Skills/Equipment/Journey) with clearer quest progress UI (**complex**)  
+  - Depends on: `/api/agent/{username}` payload shape
+- Upgrade map layering toward spec (`TerrainLayer`, `POILayer`, `PathLayer`, `AgentLayer`, `PartyGroup`) (**complex**)  
+  - Depends on: world-state shape + asset pipeline
+- Add party presentation parity (shared party bubble with member names, fan-out on hover) (**complex**)  
+  - Depends on: bubble grouping + cluster layout
+- Align status polling/state architecture with spec guidance (5m prod polling, dev override, shared UI store) (**medium**)  
+  - Depends on: current TanStack Query hooks + optional Zustand adoption
+- Add Framer Motion transitions for modal/tabs/panel/bubbles/toasts (**medium**)  
+  - Depends on: UI structure parity
+
 ---
 
 ## Phase 4 — Polish & Production Readiness
@@ -119,10 +145,11 @@ Complexity key: **simple / medium / complex**
   - Depends on: UI components
 - Map readability at multiple zoom levels (labels, clustering) (**complex**)  
   - Depends on: map component maturity
+- Visual parity QA pass against design docs (desktop + mobile snapshots/checklist) (**medium**)  
+  - Depends on: Phase 3.4 completion
 
 ### 4.3 Ops / observability
 - Logging + tracing for action resolution + schedulers (**medium**)  
   - Depends on: core backend flows
 - Health checks + admin endpoints (optional) (**medium**)  
   - Depends on: deployment target
-

@@ -1,24 +1,26 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export function useElementSize<T extends HTMLElement>() {
-  const ref = useRef<T | null>(null);
+  const [node, setNode] = useState<T | null>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
 
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
+  const ref = useCallback((next: T | null) => {
+    setNode(next);
+  }, []);
 
-    const update = () => setSize({ width: el.clientWidth, height: el.clientHeight });
+  useEffect(() => {
+    if (!node) return;
+
+    const update = () => setSize({ width: node.clientWidth, height: node.clientHeight });
     update();
 
     const ro = new ResizeObserver(() => update());
-    ro.observe(el);
+    ro.observe(node);
 
     return () => ro.disconnect();
-  }, []);
+  }, [node]);
 
   return { ref, size };
 }
-

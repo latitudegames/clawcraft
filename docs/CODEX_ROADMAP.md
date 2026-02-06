@@ -9,6 +9,10 @@ This document is **Codex’s execution-level roadmap** for working in this repo:
 - `game-design.md` — mechanics + API contracts/spec
 - `visual-design.md` — UI/art direction + component architecture
 - `docs/plans/2026-02-04-visual-assets-pipeline.md` — visual asset generation pipeline (AI → background removal)
+- `docs/plans/2026-02-05-clawcraft-design-technical-specification.md` — current visual + component target
+- `docs/plans/2026-02-05-clawcraft-v1-updated.md` — current V1 mechanics/API target
+- `docs/plans/2026-02-05-spectator-ui-parity-plan.md` — concrete UX/UI remediation plan from code audit
+- `docs/plans/2026-02-05-spectator-parity-qa-checklist.md` — parity QA checklist and remaining manual validation items
 
 If this roadmap conflicts with those plan docs, the plan docs win (or should be updated first).
 
@@ -179,6 +183,17 @@ Goal: the map renders world state and updates over time.
 2. Polling `/api/world-state` (TanStack Query)
 3. Speech bubbles + interpolation (time-scaled in dev)
 4. Leaderboard + agent cards
+
+Current status:
+- Functional scaffold is complete.
+- Foundation/layout/component/map/motion parity waves are largely implemented.
+- Remaining Step D work is parity QA, accessibility pass, and performance fine-tuning.
+
+Next execution order for Step D:
+1. Parity QA: desktop/mobile walkthrough against the 2026-02-05 design docs.
+2. Accessibility: keyboard/focus and contrast pass for the spectator shell.
+3. Performance: validate map responsiveness and polling behavior under demo load.
+4. Optional polish: party hover fan-out and additional ambient map effects (post-parity).
 
 Visual assets for POIs/agents/terrain:
 - Use `docs/plans/2026-02-04-visual-assets-pipeline.md` as the source of truth.
