@@ -2,6 +2,7 @@ export type WorldStateLocation = {
   id: string;
   name: string;
   type: string;
+  biome_tag: string | null;
   x: number | null;
   y: number | null;
 };

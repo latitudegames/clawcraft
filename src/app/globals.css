@@ -3,9 +3,21 @@
 @tailwind utilities;
 
 :root {
+  --grass-light: #7ec850;
+  --grass-dark: #5b8c3e;
+  --water-shallow: #6ccff6;
+  --water-deep: #3a8dbf;
+  --sand: #e8d170;
+  --dirt-path: #c9a567;
+  --stone: #8b9bb4;
+  --snow: #f0f4f8;
   --parchment-bg: #f5e6c8;
   --parchment-dark: #d4c4a8;
   --ink-brown: #4a3728;
+  --gold-accent: #ffd859;
+  --coral-accent: #ff6b6b;
+  --sky-blue: #87ceeb;
+  --cream-white: #fff9f0;
 }
 
 html,
@@ -14,17 +26,74 @@ body {
 }
 
 body {
+  font-family: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
   color: var(--ink-brown);
-  background: #faf7f0;
+  background: linear-gradient(180deg, #f9f4e8 0%, #f4ecd9 100%);
+}
+
+.cc-font-heading {
+  font-family: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 800;
+}
+
+.cc-font-rank {
+  font-family: var(--font-space-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.cc-font-pixel {
+  font-family: var(--font-pixel), ui-sans-serif, system-ui, sans-serif;
+}
+
+.cc-glass {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(8px);
+}
+
+.cc-parchment {
+  background: var(--parchment-bg);
+  border: 2px solid var(--parchment-dark);
+  box-shadow:
+    0 4px 12px rgba(74, 55, 40, 0.15),
+    inset 0 0 20px rgba(74, 55, 40, 0.05);
+}
+
+.cc-parchment-scroll {
+  position: relative;
+  isolation: isolate;
+}
+
+/* Subtle "torn scroll" edge detail used for the leaderboard panel only. */
+.cc-parchment-scroll::before {
+  content: "";
+  position: absolute;
+  left: -2px;
+  top: -2px;
+  bottom: -2px;
+  width: 18px;
+  pointer-events: none;
+  opacity: 0.8;
+  background:
+    linear-gradient(to right, rgba(212, 196, 168, 0.95), rgba(245, 230, 200, 0)),
+    radial-gradient(circle at 0 8px, rgba(74, 55, 40, 0.14) 0 2px, transparent 3px),
+    radial-gradient(circle at 0 24px, rgba(74, 55, 40, 0.09) 0 2px, transparent 3px);
+  background-size: 100% 100%, 18px 32px, 18px 32px;
+  background-repeat: no-repeat, repeat-y, repeat-y;
+  mix-blend-mode: multiply;
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+  z-index: 0;
 }
 
 .cc-terrain-grass {
-  background-color: #7ec850;
+  background-color: var(--grass-light);
   background-image:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.06)),
-    radial-gradient(circle at 16px 18px, rgba(255, 255, 255, 0.1) 0 1px, transparent 1px),
-    radial-gradient(circle at 6px 8px, rgba(0, 0, 0, 0.06) 0 1px, transparent 1px),
-    radial-gradient(circle at 26px 28px, rgba(0, 0, 0, 0.05) 0 1px, transparent 1px);
-  background-size: 100% 100%, 32px 32px, 32px 32px, 32px 32px;
-  background-position: 0 0, 0 0, 12px 10px, 18px 22px;
+    radial-gradient(circle at 18% 20%, rgba(255, 255, 255, 0.11), transparent 40%),
+    radial-gradient(circle at 80% 85%, rgba(91, 140, 62, 0.24), transparent 36%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(0, 0, 0, 0.08)),
+    radial-gradient(circle at 16px 18px, rgba(255, 255, 255, 0.11) 0 1px, transparent 1px),
+    radial-gradient(circle at 6px 8px, rgba(0, 0, 0, 0.05) 0 1px, transparent 1px),
+    radial-gradient(circle at 26px 28px, rgba(0, 0, 0, 0.04) 0 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 32px 32px, 32px 32px, 32px 32px;
+  background-position: 0 0, 0 0, 0 0, 0 0, 12px 10px, 18px 22px;
 }

@@ -9,6 +9,10 @@ This document is **Codex’s execution-level roadmap** for working in this repo:
 - `game-design.md` — mechanics + API contracts/spec
 - `visual-design.md` — UI/art direction + component architecture
 - `docs/plans/2026-02-04-visual-assets-pipeline.md` — visual asset generation pipeline (AI → background removal)
+- `docs/plans/2026-02-05-clawcraft-design-technical-specification.md` — current visual + component target
+- `docs/plans/2026-02-05-clawcraft-v1-updated.md` — current V1 mechanics/API target
+- `docs/plans/2026-02-05-spectator-ui-parity-plan.md` — concrete UX/UI remediation plan from code audit
+- `docs/plans/2026-02-05-spectator-parity-qa-checklist.md` — parity QA checklist and remaining manual validation items
 
 If this roadmap conflicts with those plan docs, the plan docs win (or should be updated first).
 
@@ -180,6 +184,17 @@ Goal: the map renders world state and updates over time.
 3. Speech bubbles + interpolation (time-scaled in dev)
 4. Leaderboard + agent cards
 
+Current status:
+- Functional scaffold is complete.
+- Foundation/layout/component/map/motion parity waves are largely implemented.
+- Remaining Step D work is parity QA, accessibility pass, and performance fine-tuning.
+
+Next execution order for Step D:
+1. Parity QA: desktop/mobile walkthrough against the 2026-02-05 design docs.
+2. Accessibility: keyboard/focus and contrast pass for the spectator shell.
+3. Performance: validate map responsiveness and polling behavior under demo load.
+4. Optional polish: party hover fan-out and additional ambient map effects (post-parity).
+
 Visual assets for POIs/agents/terrain:
 - Use `docs/plans/2026-02-04-visual-assets-pipeline.md` as the source of truth.
 - It’s acceptable to add an icon library (e.g. `lucide-react`) if UI needs it.
@@ -223,11 +238,16 @@ Deliverable: humans can watch the world without interacting.
    - `scripts/dev/llm-quest.mjs` (via `npm run dev:llm:quest`) generates + validates 1 quest narrative payload (no CI network calls)
 7. Dev “demo populater”
 		   - `scripts/dev/demo.mjs` (via `npm run dev:demo -- --party`) creates demo agents and starts quests so the spectator map has activity immediately
+		   - Load-testing knob: `DEMO_CAP` raises the hard cap above 40 (use carefully; default remains 40)
 8. Dev seed script
 		   - `scripts/dev/seed.mjs` (via `npm run dev:seed`) to upsert:
 		     - locations + connections
 		     - starter items
-9. Offline sim (no DB / no server)
+9. World-state perf harness
+		   - `scripts/dev/perf-world-state.mjs` (via `npm run dev:perf:world-state`) prints p50/p95 timing baselines for `/api/world-state`
+10. Map render perf harness (headless)
+		   - `scripts/dev/perf-map-render.mjs` (via `npm run dev:perf:map-render`) samples requestAnimationFrame deltas under synthetic load
+11. Offline sim (no DB / no server)
 		   - `src/lib/sim/smoke.ts` (via `npm run sim:smoke`) prints a deterministic JSON payload for fast iteration
 
 ### Note: CLI-only (intentionally)

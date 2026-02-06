@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { DEV_CONFIG } from "@/config/dev-mode";
 import { prisma } from "@/lib/db/prisma";
 import { scaleDurationMs, questStepInfoAt } from "@/lib/game/timing";
+import { withSyntheticAgents } from "@/lib/game/synthetic-world-state";
 import { resolveQuestRun } from "@/lib/server/resolve-quest-run";
 import { createAsyncTtlCache } from "@/lib/utils/async-ttl-cache";
 import type { WorldStateResponse } from "@/types/world-state";
@@ -15,6 +16,7 @@ const STATUS_STEPS = 20;
 const WORLD_STATE_CACHE_TTL_MS = 1_000;
 
 const worldStateCache = createAsyncTtlCache<WorldStateResponse>({ ttlMs: WORLD_STATE_CACHE_TTL_MS });
+const worldSkeletonCache = createAsyncTtlCache<WorldStateResponse>({ ttlMs: WORLD_STATE_CACHE_TTL_MS });
 
 function cooldownMs() {
   return DEV_CONFIG.DEV_MODE ? scaleDurationMs(COOLDOWN_MS, DEV_CONFIG.TIME_SCALE) : COOLDOWN_MS;
@@ -24,11 +26,49 @@ function statusIntervalMs() {
   return DEV_CONFIG.DEV_MODE ? scaleDurationMs(STATUS_INTERVAL_MS, DEV_CONFIG.TIME_SCALE) : STATUS_INTERVAL_MS;
 }
 
+async function computeWorldSkeleton(): Promise<WorldStateResponse> {
+  const now = new Date();
+
+  const locations = await prisma.location.findMany({
+    select: { id: true, name: true, type: true, biomeTag: true, x: true, y: true }
+  });
+
+  const rawConnections = await prisma.locationConnection.findMany({
+    select: { fromId: true, toId: true, distance: true }
+  });
+  const seenEdges = new Set<string>();
+  const connections = [];
+  for (const c of rawConnections) {
+    const a = c.fromId;
+    const b = c.toId;
+    const fromId = a < b ? a : b;
+    const toId = a < b ? b : a;
+    const key = `${fromId}:${toId}`;
+    if (seenEdges.has(key)) continue;
+    seenEdges.add(key);
+    connections.push({ from_id: fromId, to_id: toId, distance: c.distance });
+  }
+
+  return {
+    server_time: now.toISOString(),
+    locations: locations.map((l) => ({
+      id: l.id,
+      name: l.name,
+      type: l.type,
+      biome_tag: l.biomeTag ?? null,
+      x: l.x,
+      y: l.y
+    })),
+    connections,
+    agents: []
+  };
+}
+
 async function computeWorldState(): Promise<WorldStateResponse> {
   const now = new Date();
 
   const locations = await prisma.location.findMany({
-    select: { id: true, name: true, type: true, x: true, y: true }
+    select: { id: true, name: true, type: true, biomeTag: true, x: true, y: true }
   });
 
   const rawConnections = await prisma.locationConnection.findMany({
@@ -75,6 +115,7 @@ async function computeWorldState(): Promise<WorldStateResponse> {
       id: l.id,
       name: l.name,
       type: l.type,
+      biome_tag: l.biomeTag ?? null,
       x: l.x,
       y: l.y
     })),
@@ -142,7 +183,50 @@ async function computeWorldState(): Promise<WorldStateResponse> {
   };
 }
 
-export async function GET() {
-  const state = await worldStateCache.get(computeWorldState);
-  return NextResponse.json(state);
+function parseIntParam(params: URLSearchParams, key: string): number | null {
+  const raw = params.get(key);
+  if (!raw) return null;
+  const n = Number.parseInt(raw, 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+function parseFloatParam(params: URLSearchParams, key: string): number | null {
+  const raw = params.get(key);
+  if (!raw) return null;
+  const n = Number.parseFloat(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+function parseBoolParam(params: URLSearchParams, key: string): boolean {
+  const raw = params.get(key);
+  return raw === "1" || raw === "true" || raw === "yes";
+}
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const synthAgents = parseIntParam(searchParams, "synth_agents");
+  const synthOnly = parseBoolParam(searchParams, "synth_only");
+
+  const state = synthOnly && DEV_CONFIG.DEV_MODE && synthAgents && synthAgents > 0
+    ? await worldSkeletonCache.get(computeWorldSkeleton)
+    : await worldStateCache.get(computeWorldState);
+
+  // Dev-only load testing mode: append synthetic agents for stress testing Pixi + bubble overlay behavior.
+  // Production should ignore these query params.
+  if (!DEV_CONFIG.DEV_MODE) return NextResponse.json(state);
+  if (!synthAgents || synthAgents <= 0) return NextResponse.json(state);
+
+  const seed = searchParams.get("synth_seed") ?? undefined;
+  const synthStatus = parseFloatParam(searchParams, "synth_status") ?? undefined;
+  const synthParty = parseFloatParam(searchParams, "synth_party") ?? undefined;
+
+  const next = withSyntheticAgents(state, {
+    count: synthAgents,
+    seed,
+    statusRate: synthStatus,
+    partyRate: synthParty,
+    only: synthOnly
+  });
+
+  return NextResponse.json(next);
 }

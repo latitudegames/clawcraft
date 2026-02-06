@@ -1,6 +1,6 @@
 # Codex Work Progress (Source of Truth)
 
-Last updated: **2026-02-05**
+Last updated: **2026-02-06**
 
 This is the **living status + work log** for changes I make in this repo.
 
@@ -10,6 +10,16 @@ I must reference these for the authoritative plan/spec:
 - `game-design.md` — mechanics + API shapes/behavior
 - `visual-design.md` — UI/art direction + component plan
 - `docs/plans/2026-02-04-visual-assets-pipeline.md` — AI asset generation + background removal pipeline
+- `docs/plans/2026-02-05-clawcraft-design-technical-specification.md` — design target for spectator UX/UI
+- `docs/plans/2026-02-05-clawcraft-v1-updated.md` — V1 gameplay/API target
+- `docs/plans/2026-02-05-spectator-ui-parity-plan.md` — concrete gap assessment and implementation waves
+- `docs/plans/2026-02-05-product-repo-improvement-tracker.md` — active milestone tracker across workstreams
+- `docs/plans/2026-02-05-wave-1-implementation-log.md` — implementation log + validation checklist for current wave
+- `docs/plans/2026-02-05-wave-2-qa-a11y-performance-log.md` — implementation log for QA/a11y/perf hardening
+- `docs/plans/2026-02-06-wave-3-map-declutter-log.md` — implementation log for map declutter/readability work
+- `docs/plans/2026-02-06-wave-4-terrain-richness-log.md` — implementation log for procedural terrain richness
+- `docs/plans/2026-02-06-wave-5-bubble-declutter-log.md` — implementation log for bubble declutter at hotspots
+- `docs/plans/2026-02-05-spectator-parity-qa-checklist.md` — parity QA checklist (automated + manual pass tracking)
 
 Execution-level translation of those docs:
 - `docs/CODEX_ROADMAP.md` — repo map + build order + dev-harness plan
@@ -67,6 +77,7 @@ Execution-level translation of those docs:
   - Party bubble dedupe: party quest runs render **one bubble per run** (label includes `+N`; focus pins the bubble to the focused party member)
   - Party/overlap readability: overlapping agents are offset into a small deterministic cluster (sprites + click targets + bubbles)
   - Zoom-based declutter (hide labels + reduce bubbles when zoomed out)
+  - Pixi text labels remain screen-sized while zooming (inverse-scale); agent name labels are focused-only
   - Agent sprites rendered on-map (starter set in `public/assets/agents/*`)
   - POI icons rendered on-map (starter set in `public/assets/poi/*`)
   - Location connection lines rendered (via `connections` in `/api/world-state`)
@@ -75,6 +86,12 @@ Execution-level translation of those docs:
   - Leaderboard panel (players/guilds tabs) wired to `/api/leaderboard*`
   - Click player row → focus map on agent + open agent modal (`GET /api/agent/[username]`)
   - Click agent marker on map → open agent modal
+- V1 behavior alignment already present:
+  - Leaderboard sort is level desc then XP desc
+  - Dashboard endpoint is batched and returns broad agent state
+  - Quest runs generate and reveal 20 statuses over 30-minute steps (time-scaled in dev mode)
+  - Guilds are social/cosmetic-only in V1 behavior
+  - Journey log is stored/served as programmatic entries
 
 ### Webhooks + background scheduling
 - Webhook registration: `POST /api/webhook`
@@ -90,8 +107,17 @@ Execution-level translation of those docs:
   - `vercel.json` schedules `GET /api/jobs/run` every 10 minutes
   - Protect the endpoint by setting `CRON_SECRET` or `JOB_SECRET` (expects `Authorization: Bearer <secret>`)
 
-### Not implemented yet (intentionally stubbed)
-- Frontend spectator polish (terrain art, animation, bubble clustering)
+### Remaining parity and polish work
+- Parity QA is not complete yet:
+  - Desktop and mobile walkthrough checklist still needs to be run against the 2026-02-05 design docs.
+- Accessibility pass is pending:
+  - Keyboard/focus behavior and contrast validation across spectator shell, drawer, modal, and toasts.
+- Map polish opportunities remain:
+  - Optional ambient map effects (particles/day-night palette shift) are deferred.
+- Visual parity observations from screenshot pass:
+  - Dense world clusters still produce heavy bubble overlap/noise in some zones.
+  - Map terrain readability and POI emphasis remain lighter than spec intent.
+  - Typography/spacing polish can be tightened in leaderboard and modal sections.
 - (Optional) Production ops polish (health checks, tracing)
 
 ---
@@ -133,21 +159,25 @@ Offline smoke (no npm deps / no DB):
 
 ## Status
 
-### Now (next concrete milestones)
-- [x] Publish to GitHub (`latitudegames/clawcraft`) and push commits
-- [x] Install deps + generate Prisma migrations (offline diff; commit `prisma/migrations/*`)
-- [x] Validate full local loop (DB + seed + server + smoke)
-- [x] Extend `/api/action`:
-  - [x] party quest queueing + timeouts (per `game-design.md`)
-  - [x] equipment equip/unequip (inventory + slots)
-- [x] Implement remaining social endpoints:
-  - [x] agent profile endpoint (`GET /api/agent/[username]`)
-  - [x] guild endpoints (`/api/guild/*`, `/api/guild/[guild_name]`)
+### Now (active focus: spectator design parity)
+- [x] Implement typography + token foundation (Nunito, Space Mono, Pixelify/Press Start 2P; expanded CSS vars/utilities).
+- [x] Refactor spectator shell to full-bleed map with fixed right leaderboard panel on desktop.
+- [x] Implement mobile UX model (collapsed header, leaderboard drawer, bottom-sheet agent card).
+- [x] Refactor agent card into tabbed sections with cleaner hierarchy and quest progress emphasis.
+- [x] Rework leaderboard tabs/rows to parchment spec (text tabs + active underline + row hover polish).
+- [x] Add Framer Motion transitions for modal open/close, tab changes, and panel transitions.
+- [x] Adjust world-state polling defaults for production-like cadence, keep a fast dev override.
+- [x] Improve map layer separation, party bubble member summaries, and POI tooltip behavior.
+- [x] Add toast layer scaffold + shared spectator UI store (Zustand).
 
-### Next (after core loop works)
-- [x] Add speech bubble overlay + reveal cadence (time-scaled in dev)
-- [x] Add agent card modal + search/focus
-- [x] (Optional) Expand `scripts/dev/smoke.mjs` to cover party + guild (agent + jobs runner added)
+### Next (after parity baseline lands)
+- [x] Run a visual parity QA pass against the 2026-02-05 design docs (desktop + mobile screenshots).
+- [x] Complete automated accessibility checks (focus traps, keyboard behavior, contrast checks via axe-core).
+- [x] Add automated screen-reader semantics smoke (role-based checks via Playwright).
+- [ ] Manual screen-reader navigation walkthrough (VoiceOver/NVDA).
+- [ ] Tune map performance and network cadence under demo/synthetic population load.
+  - Dev-only synthetic mode exists for stress testing: `/?synth_agents=2000&synth_only=1` (see `npm run dev:perf:map-render` baseline).
+- [ ] Consider optional ambient map effects (post-parity polish).
 
 ### Done
 - [x] Created `docs/CODEX_ROADMAP.md`
@@ -189,6 +219,15 @@ Determinism checks:
 - Added `scripts/dev/seed.mjs` + `npm run dev:seed`
 - Added `npm test` (Node-compiled subset test runner) + ignored `.tmp/`
 - Implemented core deterministic helpers (progression, timing, quest resolution)
+
+### 2026-02-06
+- Landed spectator parity waves (layout, typography, parchment styling, map declutter + terrain richness, wheel zoom tween, pan inertia).
+- Added repeatable QA harnesses:
+  - Parity screenshots: `npm run dev:parity:screenshots`
+  - A11y audit: `npm run dev:a11y`
+  - Screen-reader semantics smoke: `npm run dev:sr`
+- Added world-state perf harness + baseline: `npm run dev:perf:world-state`
+- Added dev-only synthetic load mode for map stress testing (wired through `/?synth_agents=...` and `/api/world-state`) + headless render perf runner: `npm run dev:perf:map-render`
 - Implemented core API loop endpoints (`/api/create-character`, `/api/quests`, `/api/action`, `/api/dashboard`)
 - Implemented spectator support endpoints (`/api/world-state`, `/api/leaderboard`, `/api/leaderboard/guilds`) + webhook registration (`/api/webhook`)
 - Remaining gaps: migrations, party quests, equipment handling, guild/agent endpoints, schedulers/UI
@@ -214,12 +253,26 @@ Determinism checks:
   - Speech bubble overlay (HTML) anchored to agent positions
   - Bubble overlap mitigation (deterministic stacking + viewport clamping)
   - Click leaderboard player → focus map on agent + open agent modal (skills, equipment, inventory, journey log, last quest)
+
+### 2026-02-06
+- Map declutter pass:
+  - Pixi text labels are inverse-scaled so POI names don't pixelate/grow while zooming
+  - Added procedural biome tile textures + Pixi base terrain tiling sprite; biome patches are now tiled (masked) instead of flat alpha circles
+  - POI labels use the pixel font family (per design spec)
+  - Agent name labels are focused-only (speech bubbles already include names)
+  - Bubble declutter: when zoomed out, solo bubbles group by nearest POI and selection prefers bubbles near viewport center
+  - POI label declutter: show/hide by POI type + zoom; always show hovered/pinned POI label
+  - Lightweight biome decoration overlays (procedural sprites) to reduce flatness around POIs
+  - Smooth wheel zoom tween (~300ms ease-out) while keeping the cursor’s world point pinned; cancels on drag/pinch and HUD interactions
+  - Light pan inertia on drag release (momentum + decay); cancels on new gestures and wheel zoom
+  - Updated parity screenshots (`npm run dev:parity:screenshots`)
   - Map zoom controls (+/−/reset) and a manual Center button
   - Leaderboard highlights the selected player; Enter selects the top search result
   - Click agent markers on the map to open the same agent modal
   - Deep-link selected agent via URL: `/?agent=<username>` (selection persists on refresh)
   - Agent modal shows a small sprite avatar (deterministic by username)
   - Agent modal shows current quest progress (Step X/20) when questing
+  - Screen-reader smoke (`npm run dev:sr`) improved to wait for rows before attempting modal/sheet checks
   - Starter pixel agent sprites rendered on the map (`public/assets/agents/*`, nearest-neighbor)
   - Starter POI icons rendered on the map (`public/assets/poi/*`)
   - Location connections included in `/api/world-state` and rendered as map lines
@@ -246,3 +299,46 @@ Determinism checks:
 - Made quest refresh scheduler production-ready with an idempotent per-cycle DB guard (`QuestRefreshCycle`).
 - Added 3 more starter agent sprites (`public/assets/agents/*`) and expanded `AGENT_SPRITE_KEYS` for more visual variety on the map.
 - Extended `GET /api/agent/[username]` to include `current_quest` and render it in the agent modal.
+- Performed a code-level UX/UI parity audit against:
+  - `docs/plans/2026-02-05-clawcraft-design-technical-specification.md`
+  - `docs/plans/2026-02-05-clawcraft-v1-updated.md`
+- Updated roadmap docs for parity execution:
+  - `ROADMAP.md` (added Phase 3.4 Design Parity Remediation)
+  - `docs/CODEX_ROADMAP.md` (added parity-focused Step D execution order)
+  - Added `docs/plans/2026-02-05-spectator-ui-parity-plan.md` (gap matrix + implementation waves)
+- Added tracking docs to drive execution from new source-of-truth specs:
+  - `docs/plans/2026-02-05-product-repo-improvement-tracker.md`
+  - `docs/plans/2026-02-05-wave-1-implementation-log.md`
+- Started parity implementation wave (foundation + shell):
+  - Loaded and wired design fonts in app layout.
+  - Expanded global design tokens and Tailwind font aliases.
+  - Refactored spectator shell to full-bleed map + fixed desktop panel + mobile drawer.
+  - Refactored agent modal into tabbed sections with mobile bottom-sheet behavior.
+  - Upgraded leaderboard tab treatment toward spec style.
+  - Updated world-state polling cadence to dev-fast / prod-conservative defaults.
+  - Verified with `npm run lint`, `npm run typecheck`, `npm run build`, and `npm test`.
+- Continued parity implementation (map/motion/state):
+  - `WorldMap` layer separation now explicit (`terrainGraphics`, `pathGraphics`, `markerGraphics`) with richer path/terrain styling.
+  - Party bubbles include member-aware summary text (`with Alice, Bob +3 others`).
+  - POI hover/tap tooltip interactions were added.
+  - Party hover fan-out now expands grouped runs on hover using deterministic offsets.
+  - Added shared spectator UI Zustand store (`src/lib/client/state/spectator-ui-store.ts`) for drawer state + toast queue.
+  - Added toast layer scaffold (`src/components/spectator/ToastLayer.tsx`) and wired world-state error notifications.
+  - Added Framer Motion transitions for tab indicators/content and bubble/tooltip reveals.
+  - Added initial accessibility hardening (keyboard-selectable leaderboard rows, modal focus trap/restore, mobile drawer escape handling).
+  - Added mobile leaderboard drawer focus trap and focus restoration.
+  - Updated parity tracking docs (`product-repo-improvement-tracker`, `wave-1-implementation-log`) to reflect M2/M3 complete and M4 items implemented.
+- Added deterministic party fan-out helper + tests:
+  - `src/lib/ui/party-fanout.ts`
+  - `src/lib/ui/party-fanout.test.ts`
+- Updated world-map pointer behavior:
+  - POI hover now responds during pointer movement without requiring drag.
+  - Hovering a party member fans out that party cluster for readability.
+- Added stronger map declutter controls:
+  - Bubble limits tightened by zoom while preserving minimum visibility.
+  - Agent labels are now budgeted by zoom/focus instead of rendering all labels.
+- Added `docs/plans/2026-02-05-spectator-parity-qa-checklist.md` to track parity QA completion and remaining manual checks.
+- Fixed a Pixi init ordering issue so the map camera transform stays in sync with HTML overlays on initial load (`WorldMap` uses a `sceneVersion` signal once `app.init()` completes).
+- Updated seeded POI coordinates to improve default camera framing and keep parity screenshot runs consistently readable.
+- Added mobile map touch gestures (single-finger pan, pinch-to-zoom) and disabled browser touch scrolling on the map container (`touch-action: none` via Tailwind `touch-none`).
+- Added an accessibility smoke audit (`npm run dev:a11y`) using axe-core + Playwright; fixed contrast issues by introducing `ink.muted` tokens so small text passes WCAG AA on parchment.

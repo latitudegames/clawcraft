@@ -9,8 +9,8 @@ const LOCATIONS = [
     type: "major_city",
     biomeTag: "plains",
     population: 250,
-    x: 100,
-    y: 100
+    x: 400,
+    y: 400
   },
   {
     name: "Whispering Woods",
@@ -18,8 +18,8 @@ const LOCATIONS = [
     type: "wild",
     biomeTag: "forest",
     population: 15,
-    x: 40,
-    y: 140
+    x: 160,
+    y: 560
   },
   {
     name: "Goblin Cave",
@@ -27,8 +27,8 @@ const LOCATIONS = [
     type: "dungeon",
     biomeTag: "cave",
     population: 0,
-    x: 160,
-    y: 140
+    x: 640,
+    y: 560
   },
   {
     name: "Ancient Library",
@@ -36,8 +36,8 @@ const LOCATIONS = [
     type: "landmark",
     biomeTag: "ruins",
     population: 0,
-    x: 60,
-    y: 40
+    x: 240,
+    y: 160
   },
   {
     name: "Dragon Peak",
@@ -45,8 +45,8 @@ const LOCATIONS = [
     type: "landmark",
     biomeTag: "mountain",
     population: 0,
-    x: 220,
-    y: 40
+    x: 880,
+    y: 160
   }
 ];
 

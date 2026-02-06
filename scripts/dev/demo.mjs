@@ -1,6 +1,7 @@
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
 const LOCATION = process.env.LOCATION ?? "King's Landing";
 const DEMO_AGENTS = Number.parseInt(process.env.DEMO_AGENTS ?? "12", 10);
+const DEMO_CAP = Number.parseInt(process.env.DEMO_CAP ?? "40", 10);
 const INCLUDE_PARTY = process.env.DEMO_PARTY === "1" || process.argv.includes("--party");
 const RUN_ID = process.env.DEMO_RUN_ID ?? Date.now().toString(36);
 
@@ -15,6 +16,7 @@ function usage() {
   console.log("  BASE_URL=http://localhost:3000");
   console.log("  LOCATION=\"King's Landing\"  (starting location fallback)");
   console.log("  DEMO_AGENTS=12");
+  console.log("  DEMO_CAP=40  (hard cap; override carefully for load tests)");
   console.log("  DEMO_PARTY=1  (or pass --party)");
   console.log("  DEMO_RUN_ID=abc123  (defaults to timestamp)");
 }
@@ -141,7 +143,8 @@ async function main() {
   }
 
   const usernames = [];
-  const desiredAgents = Number.isFinite(DEMO_AGENTS) ? Math.max(1, Math.min(40, DEMO_AGENTS)) : 12;
+  const cap = Number.isFinite(DEMO_CAP) ? Math.max(1, Math.min(10_000, DEMO_CAP)) : 40;
+  const desiredAgents = Number.isFinite(DEMO_AGENTS) ? Math.max(1, Math.min(cap, DEMO_AGENTS)) : 12;
 
   const partyLocation = uniqueLocations[0] ?? LOCATION;
   const partyQuests = questsByLocation.get(partyLocation) ?? [];
